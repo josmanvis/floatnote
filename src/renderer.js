@@ -384,6 +384,13 @@ class Glassboard {
         });
     }
 
+    updateSizeDropdown(size) {
+        const sizeItems = document.querySelectorAll('.dropdown-item[data-size]');
+        sizeItems.forEach(item => {
+            item.classList.toggle('active', item.dataset.size === size);
+        });
+    }
+
     createZoomControls() {
         const zoomControls = document.createElement('div');
         zoomControls.id = 'zoom-controls';
@@ -1389,6 +1396,22 @@ class Glassboard {
                 }
                 if (e.key === 't' || e.key === 'T') {
                     this.setMode('text');
+                    return;
+                }
+                // Size shortcuts: 1=sm, 2=md, 3=lg
+                if (e.key === '1') {
+                    window.glassboard.setWindowSize('sm');
+                    this.updateSizeDropdown('sm');
+                    return;
+                }
+                if (e.key === '2') {
+                    window.glassboard.setWindowSize('md');
+                    this.updateSizeDropdown('md');
+                    return;
+                }
+                if (e.key === '3') {
+                    window.glassboard.setWindowSize('lg');
+                    this.updateSizeDropdown('lg');
                     return;
                 }
             }

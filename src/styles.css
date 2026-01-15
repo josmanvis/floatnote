@@ -1255,8 +1255,8 @@ input, textarea, [contenteditable="true"] {
 #pagination-island {
     position: absolute;
     right: 12px;
-    top: 50%;
-    transform: translateY(-50%) translateX(5px);
+    bottom: 12px;
+    transform: translateX(5px);
     display: flex;
     align-items: center;
     gap: 8px;
@@ -1276,7 +1276,7 @@ input, textarea, [contenteditable="true"] {
 #app.focused #pagination-island {
     opacity: 1;
     visibility: visible;
-    transform: translateY(-50%) translateX(0);
+    transform: translateX(0);
 }
 
 .pagination-btn {

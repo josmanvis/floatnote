@@ -284,13 +284,13 @@ ipcMain.on('set-background-mode', (event, mode) => {
 
     // Reset vibrancy and background
     if (mode === 'blur') {
-        // Use macOS vibrancy for real blur effect
-        // 'fullscreen-ui' works better with frameless transparent windows
-        win.setVibrancy('fullscreen-ui');
-        win.setBackgroundColor('#00000000');
+        // Use macOS vibrancy for blur effect
+        // Try different vibrancy types for better effect
+        win.setVibrancy('under-window');
+        win.setBackgroundColor('#00000001'); // Nearly transparent but allows vibrancy
     } else if (mode === 'dark') {
-        win.setVibrancy(null);
-        win.setBackgroundColor('#00000000');
+        win.setVibrancy('dark');
+        win.setBackgroundColor('#00000001');
     } else {
         // Transparent
         win.setVibrancy(null);
@@ -396,14 +396,18 @@ const floatnoteFolder = path.join(app.getPath('home'), '.floatnote');
 // Export note to ~/.floatnote folder
 ipcMain.handle('export-to-floatnote', async (event, noteData) => {
     try {
+        console.log('export-to-floatnote called, saving to:', floatnoteFolder);
         // Create folder if it doesn't exist
         if (!fs.existsSync(floatnoteFolder)) {
+            console.log('Creating folder:', floatnoteFolder);
             fs.mkdirSync(floatnoteFolder, { recursive: true });
         }
 
         const filename = `note-${noteData.id}.json`;
         const filePath = path.join(floatnoteFolder, filename);
+        console.log('Writing file:', filePath);
         fs.writeFileSync(filePath, JSON.stringify(noteData, null, 2));
+        console.log('File written successfully');
         return { success: true, path: filePath };
     } catch (error) {
         console.error('Failed to export note:', error);
@@ -430,6 +434,12 @@ ipcMain.handle('open-floatnote-folder', async () => {
 ipcMain.handle('export-png', async (event, imageDataUrl) => {
     try {
         const win = BrowserWindow.fromWebContents(event.sender);
+
+        // Temporarily disable always-on-top so dialog appears in front
+        if (win) {
+            win.setAlwaysOnTop(false);
+        }
+
         const result = await dialog.showSaveDialog(win, {
             title: 'Export Note as PNG',
             defaultPath: `floatnote-${Date.now()}.png`,
@@ -437,6 +447,11 @@ ipcMain.handle('export-png', async (event, imageDataUrl) => {
                 { name: 'PNG Images', extensions: ['png'] }
             ]
         });
+
+        // Re-enable always-on-top
+        if (win) {
+            win.setAlwaysOnTop(true, 'floating', 1);
+        }
 
         if (result.canceled || !result.filePath) {
             return { success: false, canceled: true };
