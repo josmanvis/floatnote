@@ -1,0 +1,1230 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html, body {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: transparent;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    /* Disable text selection everywhere by default */
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+/* Allow text selection in editable elements */
+input, textarea, [contenteditable="true"] {
+    -webkit-user-select: text;
+    user-select: text;
+}
+
+#app {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    background: transparent;
+    border-radius: 12px;
+    overflow: hidden;
+    border: 3px solid transparent;
+    transition: border-color 0.2s ease, box-shadow 0.3s ease;
+}
+
+/* Light grey border when focused */
+#app.focused {
+    border-color: rgba(160, 160, 160, 0.5);
+}
+
+/* Yellow border while resizing */
+#app.resizing {
+    border-color: #facc15;
+    box-shadow:
+        0 0 15px rgba(250, 204, 21, 0.4),
+        0 0 30px rgba(250, 204, 21, 0.2);
+}
+
+/* Background modes - only apply when focused */
+#app.bg-transparent {
+    background: transparent;
+}
+
+#app.bg-blur {
+    background: transparent;
+}
+
+#app.bg-dark {
+    background: transparent;
+}
+
+/* Apply background only when focused */
+#app.focused.bg-blur {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+}
+
+#app.focused.bg-dark {
+    background: rgba(30, 30, 30, 0.85);
+}
+
+/* Drag handle - bar at top for moving window */
+#drag-handle {
+    position: absolute;
+    top: 0;
+    left: 24px;
+    right: 24px;
+    height: 24px;
+    -webkit-app-region: drag;
+    cursor: move;
+    z-index: 1000;
+    background: transparent;
+    transition: background 0.2s ease;
+}
+
+#drag-handle:hover {
+    background: rgba(255, 255, 255, 0.15);
+}
+
+/* Toolbar - Apple-style floating bar (right aligned) */
+#toolbar {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    transform: translateY(-5px);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    background: rgba(40, 40, 40, 0.85);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3), 0 0 1px rgba(255, 255, 255, 0.1) inset;
+    z-index: 100;
+    -webkit-app-region: drag;
+    cursor: move;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+#app:hover #toolbar {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateY(0);
+}
+
+/* Size toolbar - left aligned island */
+#size-toolbar {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    transform: translateY(-5px);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    background: rgba(40, 40, 40, 0.85);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3), 0 0 1px rgba(255, 255, 255, 0.1) inset;
+    z-index: 100;
+    -webkit-app-region: drag;
+    cursor: move;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+/* Size toolbar dropdown should open to the right, not left */
+#size-toolbar .dropdown-menu {
+    left: 0;
+    right: auto;
+}
+
+#app:hover #size-toolbar {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateY(0);
+}
+
+.toolbar-group {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    -webkit-app-region: no-drag;
+}
+
+.toolbar-divider {
+    width: 1px;
+    height: 24px;
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.tool-btn {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    border-radius: 6px;
+    color: white;
+    cursor: pointer;
+    transition: background 0.15s ease;
+    -webkit-app-region: no-drag;
+}
+
+.tool-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.tool-btn.active {
+    background: rgba(255, 255, 255, 0.25);
+}
+
+.tool-btn.danger {
+    background: rgba(239, 68, 68, 0.3);
+}
+
+.tool-btn.danger:hover {
+    background: rgba(239, 68, 68, 0.5);
+}
+
+/* Color swatch button */
+.color-swatch-btn {
+    padding: 4px !important;
+}
+
+.current-color {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+/* Color dropdown grid */
+.color-dropdown {
+    padding: 8px !important;
+}
+
+.color-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
+}
+
+.color-grid .color-btn {
+    width: 28px;
+    height: 28px;
+    border: 2px solid transparent;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: transform 0.15s ease, border-color 0.15s ease;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.color-grid .color-btn:hover {
+    transform: scale(1.1);
+}
+
+.color-grid .color-btn.active {
+    border-color: #facc15;
+    box-shadow: 0 0 0 2px rgba(250, 204, 21, 0.3);
+}
+
+/* Stroke toggle button */
+.current-stroke {
+    width: 8px;
+    height: 8px;
+    background: white;
+    border-radius: 50%;
+}
+
+/* Stroke dropdown */
+.stroke-dropdown {
+    min-width: 100px;
+}
+
+.stroke-option {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 8px 12px;
+    background: transparent;
+    border: none;
+    border-radius: 6px;
+    color: white;
+    font-size: 12px;
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+
+.stroke-option:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.stroke-option.active {
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.stroke-option.active::after {
+    content: '✓';
+    margin-left: auto;
+    color: #facc15;
+}
+
+.stroke-dot {
+    background: white;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+/* Pin toggle */
+.pin-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    cursor: pointer;
+    border-radius: 6px;
+    transition: background 0.15s ease;
+    -webkit-app-region: no-drag;
+}
+
+.pin-toggle:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.pin-toggle input {
+    display: none;
+}
+
+.pin-toggle .pin-icon {
+    color: rgba(255, 255, 255, 0.4);
+    transition: color 0.15s ease, transform 0.15s ease;
+}
+
+.pin-toggle input:checked + .pin-icon {
+    color: #facc15;
+    transform: rotate(45deg);
+}
+
+.pin-toggle:hover .pin-icon {
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.pin-toggle input:checked:hover + .pin-icon {
+    color: #fde047;
+}
+
+/* Dropdown container */
+.dropdown-container {
+    position: relative;
+    -webkit-app-region: no-drag;
+}
+
+.dropdown-menu {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    margin-top: 4px;
+    min-width: 120px;
+    background: rgba(30, 30, 30, 0.95);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    padding: 4px;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-4px);
+    transition: opacity 0.15s ease, transform 0.15s ease, visibility 0.15s;
+}
+
+.dropdown-container:hover .dropdown-menu {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+.dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 8px 10px;
+    background: transparent;
+    border: none;
+    border-radius: 6px;
+    color: white;
+    font-size: 12px;
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+
+.dropdown-item:hover {
+    background: rgba(255, 255, 255, 0.15);
+}
+
+.dropdown-item.active {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.dropdown-item.active::after {
+    content: '✓';
+    margin-left: auto;
+    color: #facc15;
+}
+
+.bg-preview {
+    width: 16px;
+    height: 16px;
+    border-radius: 4px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.bg-preview.transparent {
+    background: linear-gradient(45deg, #666 25%, transparent 25%),
+                linear-gradient(-45deg, #666 25%, transparent 25%),
+                linear-gradient(45deg, transparent 75%, #666 75%),
+                linear-gradient(-45deg, transparent 75%, #666 75%);
+    background-size: 8px 8px;
+    background-position: 0 0, 0 4px, 4px -4px, -4px 0px;
+}
+
+.bg-preview.blur {
+    background: rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(4px);
+}
+
+.bg-preview.dark {
+    background: rgba(30, 30, 30, 0.9);
+}
+
+/* Size dropdown */
+.size-label {
+    font-weight: 600;
+    font-size: 11px;
+}
+
+.size-desc {
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 10px;
+}
+
+/* Drawing canvas - fully transparent */
+#draw-canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+    background: transparent;
+}
+
+/* Text container */
+#text-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 2;
+}
+
+/* Text items */
+.text-item {
+    position: absolute;
+    pointer-events: auto;
+    min-width: 100px;
+    padding: 6px 10px;
+    padding-left: 28px;
+    background: transparent;
+    border: 2px solid transparent;
+    border-radius: 6px;
+    cursor: grab;
+    transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.text-item:active {
+    cursor: grabbing;
+}
+
+/* Text drag handle */
+.text-drag-handle {
+    position: absolute;
+    left: 4px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: rgba(255, 255, 255, 0.4);
+    cursor: grab;
+    border-radius: 4px;
+    transition: color 0.15s ease, background 0.15s ease;
+}
+
+.text-drag-handle:hover {
+    color: rgba(255, 255, 255, 0.8);
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.text-drag-handle:active {
+    cursor: grabbing;
+}
+
+/* Only show text item borders when hovering the app or app is focused */
+/* Use subtle border for hover/select, yellow only during drag/resize */
+#app:hover .text-item:hover,
+#app:hover .text-item.selected,
+#app.focused .text-item:hover,
+#app.focused .text-item.selected {
+    background: rgba(0, 0, 0, 0.2);
+    border-color: rgba(255, 255, 255, 0.3);
+}
+
+/* Yellow border only during active drag or resize operations */
+.text-item.dragging,
+.text-item.resizing {
+    border-color: #facc15 !important;
+    box-shadow: 0 0 10px rgba(250, 204, 21, 0.3);
+}
+
+/* Text format bar */
+.text-format-bar {
+    display: flex;
+    gap: 2px;
+    margin-bottom: 4px;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+}
+
+.text-item.selected .text-format-bar,
+.text-item:hover .text-format-bar {
+    opacity: 1;
+}
+
+.format-btn {
+    width: 22px;
+    height: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    border-radius: 4px;
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 12px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+
+.format-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+}
+
+.format-btn.active {
+    background: rgba(59, 130, 246, 0.5);
+    color: white;
+}
+
+.format-btn[data-format="italic"] {
+    font-style: italic;
+}
+
+.format-btn[data-format="underline"] {
+    text-decoration: underline;
+}
+
+.format-btn.delete-btn {
+    color: #ef4444;
+    margin-left: auto;
+}
+
+.format-btn.delete-btn:hover {
+    background: rgba(239, 68, 68, 0.3);
+    color: #ff6b6b;
+}
+
+/* Text input (textarea) */
+.text-item .text-input {
+    width: 100%;
+    min-width: 150px;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: white;
+    font-size: 16px;
+    font-family: inherit;
+    resize: none;
+    overflow: hidden;
+    text-shadow:
+        0 1px 2px rgba(0, 0, 0, 0.9),
+        0 0 4px rgba(0, 0, 0, 0.7);
+}
+
+.text-item .text-input::placeholder {
+    color: rgba(255, 255, 255, 0.5);
+}
+
+/* Resize handles - corners and edges */
+.resize-handle {
+    position: absolute;
+    background: transparent;
+    z-index: 1001;
+    -webkit-app-region: no-drag;
+}
+
+/* Corner handles */
+.resize-handle.se {
+    right: 0;
+    bottom: 0;
+    width: 24px;
+    height: 24px;
+    cursor: se-resize;
+}
+
+.resize-handle.sw {
+    left: 0;
+    bottom: 0;
+    width: 24px;
+    height: 24px;
+    cursor: sw-resize;
+}
+
+.resize-handle.ne {
+    right: 0;
+    top: 0;
+    width: 24px;
+    height: 24px;
+    cursor: ne-resize;
+}
+
+.resize-handle.nw {
+    left: 0;
+    top: 0;
+    width: 24px;
+    height: 24px;
+    cursor: nw-resize;
+}
+
+/* Edge handles */
+.resize-handle.n {
+    top: 0;
+    left: 24px;
+    right: 24px;
+    height: 8px;
+    cursor: n-resize;
+}
+
+.resize-handle.s {
+    bottom: 0;
+    left: 24px;
+    right: 24px;
+    height: 8px;
+    cursor: s-resize;
+}
+
+.resize-handle.e {
+    right: 0;
+    top: 24px;
+    bottom: 24px;
+    width: 8px;
+    cursor: e-resize;
+}
+
+.resize-handle.w {
+    left: 0;
+    top: 24px;
+    bottom: 24px;
+    width: 8px;
+    cursor: w-resize;
+}
+
+/* Hide focus border element - we use glow instead */
+#focus-border {
+    display: none;
+}
+
+/* Zoom controls - bottom left */
+#zoom-controls {
+    position: absolute;
+    bottom: 12px;
+    left: 12px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 10px;
+    background: rgba(30, 30, 30, 0.9);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    z-index: 100;
+    opacity: 0;
+    transform: translateY(5px);
+    transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+#app:hover #zoom-controls {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.zoom-btn {
+    width: 26px;
+    height: 26px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    border-radius: 4px;
+    color: white;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+
+.zoom-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+#zoom-indicator {
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 12px;
+    min-width: 40px;
+    text-align: center;
+}
+
+/* Context menu */
+#context-menu {
+    position: fixed;
+    min-width: 120px;
+    background: rgba(30, 30, 30, 0.95);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    padding: 4px;
+    z-index: 10000;
+    opacity: 0;
+    visibility: hidden;
+    transform: scale(0.95);
+    transition: opacity 0.1s ease, transform 0.1s ease, visibility 0.1s;
+}
+
+#context-menu.visible {
+    opacity: 1;
+    visibility: visible;
+    transform: scale(1);
+}
+
+.context-menu-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 8px 12px;
+    background: transparent;
+    border: none;
+    border-radius: 6px;
+    color: white;
+    font-size: 13px;
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+
+.context-menu-item:hover {
+    background: rgba(255, 255, 255, 0.15);
+}
+
+.context-menu-item .shortcut {
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 11px;
+}
+
+.context-menu-item:disabled {
+    cursor: not-allowed;
+}
+
+.context-menu-divider {
+    height: 1px;
+    background: rgba(255, 255, 255, 0.15);
+    margin: 4px 0;
+}
+
+/* Paste overlay */
+.paste-overlay {
+    position: absolute;
+    background: rgba(30, 30, 30, 0.95);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-radius: 12px;
+    border: 2px solid rgba(59, 130, 246, 0.5);
+    padding: 12px;
+    z-index: 1000;
+    cursor: pointer;
+    transform: translate(-50%, -50%);
+    max-width: 300px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+    animation: paste-overlay-in 0.2s ease-out;
+}
+
+@keyframes paste-overlay-in {
+    from {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0.9);
+    }
+    to {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+    }
+}
+
+.paste-overlay:hover {
+    border-color: rgba(59, 130, 246, 0.8);
+    box-shadow: 0 8px 32px rgba(59, 130, 246, 0.2);
+}
+
+.paste-preview-image {
+    max-width: 250px;
+    max-height: 150px;
+    border-radius: 8px;
+    object-fit: contain;
+    display: block;
+    margin-bottom: 8px;
+}
+
+.paste-preview-text {
+    max-width: 250px;
+    max-height: 80px;
+    overflow: hidden;
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 12px;
+    line-height: 1.4;
+    margin-bottom: 8px;
+    padding: 8px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 6px;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.paste-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: white;
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.paste-icon {
+    font-size: 16px;
+}
+
+.paste-size {
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 11px;
+    margin-left: auto;
+}
+
+/* Pasted images */
+.pasted-image {
+    position: absolute;
+    cursor: grab;
+    border: 2px solid transparent;
+    border-radius: 8px;
+    transition: border-color 0.15s ease;
+    z-index: 5;
+}
+
+.pasted-image:hover,
+.pasted-image.selected {
+    border-color: #3b82f6;
+}
+
+.pasted-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    border-radius: 6px;
+    pointer-events: none;
+}
+
+.pasted-image:active {
+    cursor: grabbing;
+}
+
+.image-delete-btn {
+    position: absolute;
+    top: -10px;
+    right: -10px;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: #ef4444;
+    border: 2px solid white;
+    color: white;
+    font-size: 12px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.15s ease, transform 0.15s ease;
+    z-index: 10;
+}
+
+.pasted-image:hover .image-delete-btn {
+    opacity: 1;
+}
+
+.image-delete-btn:hover {
+    transform: scale(1.1);
+    background: #dc2626;
+}
+
+.image-resize-handle {
+    position: absolute;
+    bottom: -6px;
+    right: -6px;
+    width: 16px;
+    height: 16px;
+    background: #3b82f6;
+    border: 2px solid white;
+    border-radius: 4px;
+    cursor: se-resize;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+    z-index: 10;
+}
+
+.pasted-image:hover .image-resize-handle {
+    opacity: 1;
+}
+
+/* Text resize handle */
+.text-resize-handle {
+    position: absolute;
+    bottom: -4px;
+    right: -4px;
+    width: 14px;
+    height: 14px;
+    background: #3b82f6;
+    border: 2px solid white;
+    border-radius: 3px;
+    cursor: se-resize;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+    z-index: 10;
+}
+
+.text-item:hover .text-resize-handle,
+.text-item.selected .text-resize-handle {
+    opacity: 1;
+}
+
+.text-resize-handle:hover {
+    background: #2563eb;
+}
+
+/* Settings panel */
+.settings-panel {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0.95);
+    width: 320px;
+    max-height: 80%;
+    background: rgba(30, 30, 30, 0.98);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    z-index: 10000;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.2s ease, transform 0.2s ease, visibility 0.2s;
+    overflow: hidden;
+}
+
+.settings-panel.visible {
+    opacity: 1;
+    visibility: visible;
+    transform: translate(-50%, -50%) scale(1);
+}
+
+.settings-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.settings-header h2 {
+    color: white;
+    font-size: 16px;
+    font-weight: 600;
+    margin: 0;
+}
+
+.settings-close-btn {
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    border-radius: 6px;
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 14px;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+
+.settings-close-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+}
+
+.settings-content {
+    padding: 16px 20px;
+    overflow-y: auto;
+    max-height: calc(80vh - 60px);
+}
+
+.settings-section {
+    margin-bottom: 20px;
+}
+
+.settings-section:last-child {
+    margin-bottom: 0;
+}
+
+.settings-section h3 {
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin: 0 0 12px 0;
+}
+
+.settings-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 0;
+    cursor: pointer;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.settings-toggle:last-child {
+    border-bottom: none;
+}
+
+.settings-toggle span:first-child {
+    color: white;
+    font-size: 14px;
+}
+
+.settings-toggle input {
+    display: none;
+}
+
+.toggle-slider {
+    width: 40px;
+    height: 24px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 12px;
+    position: relative;
+    transition: background 0.2s ease;
+}
+
+.toggle-slider::after {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 20px;
+    height: 20px;
+    background: white;
+    border-radius: 50%;
+    transition: transform 0.2s ease;
+}
+
+.settings-toggle input:checked + .toggle-slider {
+    background: #3b82f6;
+}
+
+.settings-toggle input:checked + .toggle-slider::after {
+    transform: translateX(16px);
+}
+
+.shortcuts-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.shortcut-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 0;
+}
+
+.shortcut-item span {
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 13px;
+}
+
+.shortcut-item kbd {
+    background: rgba(255, 255, 255, 0.1);
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.7);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Left edge resize handle */
+#left-resize-handle {
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: 6px;
+    height: 100%;
+    cursor: ew-resize;
+    z-index: 9999;
+    background: transparent;
+    transition: background 0.15s ease;
+}
+
+#left-resize-handle:hover {
+    background: rgba(59, 130, 246, 0.5);
+}
+
+#left-resize-handle:active {
+    background: rgba(59, 130, 246, 0.8);
+}
+
+/* Disable pointer events on overlays while drawing */
+#app.drawing .text-item,
+#app.drawing .pasted-image,
+#app.drawing #text-container {
+    pointer-events: none;
+}
+
+/* Settings background options */
+.settings-bg-options {
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.settings-label {
+    color: white;
+    font-size: 14px;
+    display: block;
+    margin-bottom: 10px;
+}
+
+.bg-option-group {
+    display: flex;
+    gap: 12px;
+}
+
+.bg-option {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+}
+
+.bg-option input {
+    display: none;
+}
+
+.bg-option-box {
+    width: 48px;
+    height: 32px;
+    border-radius: 6px;
+    border: 2px solid transparent;
+    transition: border-color 0.15s ease;
+}
+
+.bg-option-box.transparent {
+    background: linear-gradient(45deg, #333 25%, transparent 25%),
+                linear-gradient(-45deg, #333 25%, transparent 25%),
+                linear-gradient(45deg, transparent 75%, #333 75%),
+                linear-gradient(-45deg, transparent 75%, #333 75%);
+    background-size: 8px 8px;
+    background-position: 0 0, 0 4px, 4px -4px, -4px 0px;
+    background-color: #222;
+}
+
+.bg-option-box.blur {
+    background: linear-gradient(135deg, rgba(100, 100, 100, 0.5), rgba(150, 150, 150, 0.3));
+    backdrop-filter: blur(4px);
+}
+
+.bg-option-box.dark {
+    background: rgba(0, 0, 0, 0.7);
+}
+
+.bg-option input:checked + .bg-option-box {
+    border-color: #3b82f6;
+}
+
+.bg-option span:last-child {
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 11px;
+}
+
+/* Note indicator */
+#note-indicator {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 14px;
+    font-weight: 500;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s;
+    z-index: 9999;
+    pointer-events: none;
+}
+
+#note-indicator.visible {
+    opacity: 1;
+    visibility: visible;
+}

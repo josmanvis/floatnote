@@ -1,0 +1,43 @@
+{
+  "name": "floatnote",
+  "version": "1.0.0",
+  "description": "Transparent always-on-top drawing and note-taking overlay for macOS",
+  "main": "src/main.js",
+  "bin": {
+    "floatnote": "./bin/floatnote.js"
+  },
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --enable-logging",
+    "build": "electron-builder --mac --publish never",
+    "release": "electron-builder --mac --publish always"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/josmanvis/floatnote.git"
+  },
+  "homepage": "https://github.com/josmanvis/floatnote",
+  "keywords": ["electron", "drawing", "overlay", "notes", "macos", "transparent", "annotation"],
+  "author": "Jose",
+  "license": "MIT",
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "devDependencies": {
+    "electron": "^33.0.0",
+    "electron-builder": "^25.0.0"
+  },
+  "build": {
+    "appId": "com.floatnote.app",
+    "productName": "Floatnote",
+    "mac": {
+      "category": "public.app-category.productivity",
+      "target": ["dmg", "zip"]
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "josmanvis",
+      "repo": "floatnote"
+    }
+  }
+}

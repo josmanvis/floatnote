@@ -1,0 +1,16 @@
+node_modules/
+.build/
+dist/
+*.dmg
+*.zip
+*.blockmap
+.git/
+.github/
+.DS_Store
+*.log
+.env
+GEMINI.md
+mac-arm64/
+.npm-cache/
+.claude/
+package-lock.json
