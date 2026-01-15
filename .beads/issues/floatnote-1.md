@@ -1,6 +1,6 @@
 # floatnote-1: Set up testing infrastructure
 
-**Status:** open
+**Status:** closed
 **Priority:** high
 **Labels:** infrastructure, testing
 

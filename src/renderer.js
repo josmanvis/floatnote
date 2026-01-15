@@ -52,7 +52,8 @@ class Glassboard {
             activeBgMode: 'transparent',
             inactiveBgMode: 'transparent',
             activeOpacity: 100,
-            inactiveOpacity: 50
+            inactiveOpacity: 50,
+            autoSaveToFolder: false
         };
 
         // Selection rectangle state
@@ -1242,6 +1243,13 @@ class Glassboard {
                 return;
             }
 
+            // Cmd+S to export as PNG
+            if ((e.metaKey || e.ctrlKey) && e.key === 's') {
+                e.preventDefault();
+                this.exportAsPNG();
+                return;
+            }
+
             // Cmd+, to open settings
             if ((e.metaKey || e.ctrlKey) && e.key === ',') {
                 e.preventDefault();
@@ -1649,9 +1657,23 @@ class Glassboard {
             this.drawLine(this.currentLine);
         }
 
-        // Draw selection highlight
+        // Draw selection highlight for single selection
         if (this.selectedObjectId) {
             this.drawSelectionHighlight();
+        }
+
+        // Draw selection highlights for multi-selected objects
+        if (this.multiSelectedObjects.length > 0) {
+            this.multiSelectedObjects.forEach(objectId => {
+                this.drawSelectionHighlightForObject(objectId);
+            });
+        }
+
+        // Draw selection highlights for all-selected objects
+        if (this.allSelected && this.selectedObjects.length > 0) {
+            this.selectedObjects.forEach(objectId => {
+                this.drawSelectionHighlightForObject(objectId);
+            });
         }
     }
 
@@ -1710,6 +1732,36 @@ class Glassboard {
         corners.forEach(([x, y]) => {
             this.ctx.fillRect(x - handleSize/2, y - handleSize/2, handleSize, handleSize);
         });
+    }
+
+    // Draw selection highlight for a specific object (used for multi-select)
+    drawSelectionHighlightForObject(objectId) {
+        const selectedLines = this.lines.filter(l => l.objectId === objectId);
+        if (selectedLines.length === 0) return;
+
+        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+        selectedLines.forEach(line => {
+            line.points.forEach(p => {
+                minX = Math.min(minX, p.x);
+                minY = Math.min(minY, p.y);
+                maxX = Math.max(maxX, p.x);
+                maxY = Math.max(maxY, p.y);
+            });
+        });
+
+        // Add padding
+        const padding = 8;
+        minX -= padding;
+        minY -= padding;
+        maxX += padding;
+        maxY += padding;
+
+        // Draw selection box (green for multi-select to distinguish)
+        this.ctx.strokeStyle = '#22c55e';
+        this.ctx.lineWidth = 2;
+        this.ctx.setLineDash([5, 5]);
+        this.ctx.strokeRect(minX, minY, maxX - minX, maxY - minY);
+        this.ctx.setLineDash([]);
     }
 
     clear() {
@@ -2073,14 +2125,17 @@ class Glassboard {
         // Gesture toggles
         document.getElementById('setting-pinch-zoom').addEventListener('change', (e) => {
             this.settings.pinchZoom = e.target.checked;
+            this.autoSave();
         });
 
         document.getElementById('setting-pan').addEventListener('change', (e) => {
             this.settings.pan = e.target.checked;
+            this.autoSave();
         });
 
         document.getElementById('setting-rotate').addEventListener('change', (e) => {
             this.settings.rotate = e.target.checked;
+            this.autoSave();
         });
 
         // Zoom controls toggle
@@ -2090,6 +2145,7 @@ class Glassboard {
             if (zoomControls) {
                 zoomControls.style.display = e.target.checked ? '' : 'none';
             }
+            this.autoSave();
         });
 
         // Active background mode options
@@ -2156,6 +2212,23 @@ class Glassboard {
             cleanSlateCheckbox.addEventListener('change', (e) => {
                 this.settings.openWithCleanSlate = e.target.checked;
                 this.autoSave();
+            });
+        }
+
+        // Auto-save to folder setting
+        const autoSaveFolderCheckbox = document.getElementById('setting-auto-save-folder');
+        if (autoSaveFolderCheckbox) {
+            autoSaveFolderCheckbox.addEventListener('change', (e) => {
+                this.settings.autoSaveToFolder = e.target.checked;
+                this.autoSave();
+            });
+        }
+
+        // Open folder button
+        const openFolderBtn = document.getElementById('open-folder-btn');
+        if (openFolderBtn) {
+            openFolderBtn.addEventListener('click', () => {
+                this.openFloatnoteFolder();
             });
         }
     }
@@ -2438,8 +2511,86 @@ class Glassboard {
 
         try {
             await window.glassboard.saveData(data);
+
+            // Also save to ~/.floatnote folder if enabled
+            if (this.settings.autoSaveToFolder && this.notes[this.currentNoteIndex]) {
+                await window.glassboard.exportToFloatnote(this.notes[this.currentNoteIndex]);
+            }
         } catch (error) {
             console.error('Failed to save data:', error);
+        }
+    }
+
+    // Export current note as PNG
+    async exportAsPNG() {
+        try {
+            // Create a temporary canvas to render everything
+            const exportCanvas = document.createElement('canvas');
+            const rect = this.canvas.getBoundingClientRect();
+            exportCanvas.width = rect.width;
+            exportCanvas.height = rect.height;
+            const exportCtx = exportCanvas.getContext('2d');
+
+            // Fill with transparent background
+            exportCtx.clearRect(0, 0, exportCanvas.width, exportCanvas.height);
+
+            // Draw all lines from current note
+            this.lines.forEach(line => {
+                if (line.points.length < 2) return;
+                exportCtx.beginPath();
+                exportCtx.strokeStyle = line.color;
+                exportCtx.lineWidth = line.width;
+                exportCtx.lineCap = 'round';
+                exportCtx.lineJoin = 'round';
+                exportCtx.moveTo(line.points[0].x, line.points[0].y);
+                for (let i = 1; i < line.points.length; i++) {
+                    exportCtx.lineTo(line.points[i].x, line.points[i].y);
+                }
+                exportCtx.stroke();
+            });
+
+            // Draw text items
+            this.textItems.forEach(item => {
+                const element = this.textContainer.querySelector(`[data-id="${item.id}"]`);
+                if (element) {
+                    const textarea = element.querySelector('.text-input');
+                    if (textarea && textarea.value) {
+                        exportCtx.font = '16px system-ui, -apple-system, sans-serif';
+                        exportCtx.fillStyle = item.color;
+                        const lines = textarea.value.split('\n');
+                        lines.forEach((line, i) => {
+                            exportCtx.fillText(line, item.x, item.y + 20 + (i * 20));
+                        });
+                    }
+                }
+            });
+
+            // Draw images
+            for (const img of this.images) {
+                const imgElement = document.querySelector(`.pasted-image[data-id="${img.id}"] img`);
+                if (imgElement) {
+                    exportCtx.drawImage(imgElement, img.x, img.y, img.width, img.height);
+                }
+            }
+
+            // Get data URL and export
+            const dataUrl = exportCanvas.toDataURL('image/png');
+            const result = await window.glassboard.exportPNG(dataUrl);
+
+            if (result.success) {
+                console.log('Exported to:', result.path);
+            }
+        } catch (error) {
+            console.error('Failed to export PNG:', error);
+        }
+    }
+
+    // Open ~/.floatnote folder in Finder
+    async openFloatnoteFolder() {
+        try {
+            await window.glassboard.openFloatnoteFolder();
+        } catch (error) {
+            console.error('Failed to open folder:', error);
         }
     }
 
@@ -2460,6 +2611,10 @@ class Glassboard {
                     const cleanSlateCheckbox = document.getElementById('setting-clean-slate');
                     if (cleanSlateCheckbox) {
                         cleanSlateCheckbox.checked = this.settings.openWithCleanSlate;
+                    }
+                    const autoSaveFolderCheckbox = document.getElementById('setting-auto-save-folder');
+                    if (autoSaveFolderCheckbox) {
+                        autoSaveFolderCheckbox.checked = this.settings.autoSaveToFolder || false;
                     }
                     const zoomControls = document.getElementById('zoom-controls');
                     if (zoomControls) {
@@ -2603,6 +2758,8 @@ class Glassboard {
         });
 
         this.allSelected = true;
+        // Redraw to show selection highlights on drawn objects
+        this.redraw();
     }
 
     // Delete all selected items

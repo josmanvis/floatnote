@@ -1,6 +1,6 @@
 # floatnote-17: Background opacity controls
 
-**Status:** open
+**Status:** closed
 **Priority:** medium
 **Labels:** feature, appearance
 

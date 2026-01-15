@@ -1,6 +1,6 @@
 # floatnote-15: Note pagination UI island
 
-**Status:** open
+**Status:** closed
 **Priority:** high
 **Labels:** feature, ui
 

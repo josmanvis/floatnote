@@ -1,4 +1,4 @@
-const { app, BrowserWindow, globalShortcut, dialog, ipcMain, screen, Tray, Menu, nativeImage } = require('electron');
+const { app, BrowserWindow, globalShortcut, dialog, ipcMain, screen, Tray, Menu, nativeImage, shell } = require('electron');
 const path = require('path');
 const fs = require('fs');
 
@@ -386,6 +386,68 @@ ipcMain.handle('load-data', async () => {
         return { success: true, data: null };
     } catch (error) {
         console.error('Failed to load data:', error);
+        return { success: false, error: error.message };
+    }
+});
+
+// Floatnote folder path
+const floatnoteFolder = path.join(app.getPath('home'), '.floatnote');
+
+// Export note to ~/.floatnote folder
+ipcMain.handle('export-to-floatnote', async (event, noteData) => {
+    try {
+        // Create folder if it doesn't exist
+        if (!fs.existsSync(floatnoteFolder)) {
+            fs.mkdirSync(floatnoteFolder, { recursive: true });
+        }
+
+        const filename = `note-${noteData.id}.json`;
+        const filePath = path.join(floatnoteFolder, filename);
+        fs.writeFileSync(filePath, JSON.stringify(noteData, null, 2));
+        return { success: true, path: filePath };
+    } catch (error) {
+        console.error('Failed to export note:', error);
+        return { success: false, error: error.message };
+    }
+});
+
+// Open ~/.floatnote folder in Finder
+ipcMain.handle('open-floatnote-folder', async () => {
+    try {
+        // Create folder if it doesn't exist
+        if (!fs.existsSync(floatnoteFolder)) {
+            fs.mkdirSync(floatnoteFolder, { recursive: true });
+        }
+        await shell.openPath(floatnoteFolder);
+        return { success: true };
+    } catch (error) {
+        console.error('Failed to open folder:', error);
+        return { success: false, error: error.message };
+    }
+});
+
+// Export note as PNG with save dialog
+ipcMain.handle('export-png', async (event, imageDataUrl) => {
+    try {
+        const win = BrowserWindow.fromWebContents(event.sender);
+        const result = await dialog.showSaveDialog(win, {
+            title: 'Export Note as PNG',
+            defaultPath: `floatnote-${Date.now()}.png`,
+            filters: [
+                { name: 'PNG Images', extensions: ['png'] }
+            ]
+        });
+
+        if (result.canceled || !result.filePath) {
+            return { success: false, canceled: true };
+        }
+
+        // Remove data URL prefix and write file
+        const base64Data = imageDataUrl.replace(/^data:image\/png;base64,/, '');
+        fs.writeFileSync(result.filePath, Buffer.from(base64Data, 'base64'));
+        return { success: true, path: result.filePath };
+    } catch (error) {
+        console.error('Failed to export PNG:', error);
         return { success: false, error: error.message };
     }
 });

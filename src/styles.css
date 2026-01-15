@@ -1083,6 +1083,28 @@ input, textarea, [contenteditable="true"] {
     transform: translateX(16px);
 }
 
+.settings-btn {
+    width: 100%;
+    padding: 10px 16px;
+    margin-top: 10px;
+    background: rgba(59, 130, 246, 0.2);
+    border: 1px solid rgba(59, 130, 246, 0.4);
+    border-radius: 6px;
+    color: #3b82f6;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.settings-btn:hover {
+    background: rgba(59, 130, 246, 0.3);
+    border-color: rgba(59, 130, 246, 0.6);
+}
+
+.settings-btn:active {
+    background: rgba(59, 130, 246, 0.4);
+}
+
 .shortcuts-list {
     display: flex;
     flex-direction: column;

@@ -70,5 +70,17 @@ contextBridge.exposeInMainWorld('glassboard', {
     // Window resize
     resizeWindowLeft: (deltaX) => {
         ipcRenderer.send('resize-window-left', deltaX);
+    },
+    // Export note to ~/.floatnote folder
+    exportToFloatnote: (noteData) => {
+        return ipcRenderer.invoke('export-to-floatnote', noteData);
+    },
+    // Open ~/.floatnote folder in Finder
+    openFloatnoteFolder: () => {
+        return ipcRenderer.invoke('open-floatnote-folder');
+    },
+    // Export note as PNG
+    exportPNG: (imageDataUrl) => {
+        return ipcRenderer.invoke('export-png', imageDataUrl);
     }
 });

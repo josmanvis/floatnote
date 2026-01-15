@@ -1,6 +1,6 @@
 # floatnote-14: Multi-select with drag box
 
-**Status:** open
+**Status:** closed
 **Priority:** high
 **Labels:** feature, selection
 

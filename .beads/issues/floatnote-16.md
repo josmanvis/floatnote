@@ -1,6 +1,6 @@
 # floatnote-16: Inactive background options
 
-**Status:** open
+**Status:** closed
 **Priority:** medium
 **Labels:** feature, appearance
 
