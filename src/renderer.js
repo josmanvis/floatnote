@@ -48,8 +48,20 @@ class Glassboard {
             pan: true,
             rotate: true,
             showZoomControls: true,
-            openWithCleanSlate: false
+            openWithCleanSlate: false,
+            activeBgMode: 'transparent',
+            inactiveBgMode: 'transparent',
+            activeOpacity: 100,
+            inactiveOpacity: 50
         };
+
+        // Selection rectangle state
+        this.isSelecting = false;
+        this.selectionStart = null;
+        this.selectionRect = document.getElementById('selection-rect');
+
+        // Multi-selection state
+        this.multiSelectedObjects = [];
 
         // Clipboard state (internal)
         this.clipboard = null; // { type: 'object' | 'text', data: ... }
@@ -101,6 +113,9 @@ class Glassboard {
 
         // Setup left edge resize
         this.setupLeftResize();
+
+        // Setup pagination controls
+        this.setupPagination();
     }
 
     // Note management - getters for current note's data
@@ -216,6 +231,10 @@ class Glassboard {
 
     // Update note indicator in UI
     updateNoteIndicator() {
+        // Update pagination counter
+        this.updatePaginationCounter();
+
+        // Show temporary indicator
         let indicator = document.getElementById('note-indicator');
         if (!indicator) {
             indicator = document.createElement('div');
@@ -440,12 +459,17 @@ class Glassboard {
 
             // Deselect if clicking empty space
             this.deselectObject();
+            this.clearMultiSelection();
 
-            // In select mode, show paste overlay if clipboard has content
+            // In select mode, start drag-box selection
             if (this.isSelectMode) {
-                if (this.systemClipboard) {
-                    this.showPasteOverlay(e.clientX, e.clientY);
-                }
+                this.isSelecting = true;
+                this.selectionStart = point;
+                this.selectionRect.style.left = point.x + 'px';
+                this.selectionRect.style.top = point.y + 'px';
+                this.selectionRect.style.width = '0px';
+                this.selectionRect.style.height = '0px';
+                this.selectionRect.classList.add('active');
                 return;
             }
 
@@ -474,6 +498,19 @@ class Glassboard {
 
             const point = getPoint(e);
 
+            // Handle drag-box selection
+            if (this.isSelecting && this.selectionStart) {
+                const x = Math.min(point.x, this.selectionStart.x);
+                const y = Math.min(point.y, this.selectionStart.y);
+                const width = Math.abs(point.x - this.selectionStart.x);
+                const height = Math.abs(point.y - this.selectionStart.y);
+                this.selectionRect.style.left = x + 'px';
+                this.selectionRect.style.top = y + 'px';
+                this.selectionRect.style.width = width + 'px';
+                this.selectionRect.style.height = height + 'px';
+                return;
+            }
+
             // Handle object dragging
             if (this.isDraggingObject && this.selectedObjectId) {
                 const dx = point.x - this.dragStartPoint.x;
@@ -488,7 +525,26 @@ class Glassboard {
             this.redraw();
         };
 
-        const stopDrawing = () => {
+        const stopDrawing = (e) => {
+            // Handle drag-box selection completion
+            if (this.isSelecting) {
+                this.isSelecting = false;
+                this.selectionRect.classList.remove('active');
+
+                if (this.selectionStart) {
+                    const point = e ? getPoint(e) : this.selectionStart;
+                    const rect = {
+                        x: Math.min(point.x, this.selectionStart.x),
+                        y: Math.min(point.y, this.selectionStart.y),
+                        width: Math.abs(point.x - this.selectionStart.x),
+                        height: Math.abs(point.y - this.selectionStart.y)
+                    };
+                    this.selectObjectsInRect(rect);
+                }
+                this.selectionStart = null;
+                return;
+            }
+
             if (this.isDraggingObject) {
                 this.isDraggingObject = false;
                 this.dragStartPoint = null;
@@ -565,6 +621,78 @@ class Glassboard {
         }
         this.redraw();
         this.saveState();
+    }
+
+    // Select all objects within a rectangle
+    selectObjectsInRect(rect) {
+        const selectedIds = new Set();
+
+        // Find all objects with points inside the rectangle
+        this.lines.forEach(line => {
+            for (const p of line.points) {
+                if (p.x >= rect.x && p.x <= rect.x + rect.width &&
+                    p.y >= rect.y && p.y <= rect.y + rect.height) {
+                    selectedIds.add(line.objectId);
+                    break;
+                }
+            }
+        });
+
+        this.multiSelectedObjects = Array.from(selectedIds);
+
+        // If only one object, use single selection
+        if (this.multiSelectedObjects.length === 1) {
+            this.selectObject(this.multiSelectedObjects[0]);
+            this.multiSelectedObjects = [];
+        } else if (this.multiSelectedObjects.length > 1) {
+            this.redraw();
+        }
+    }
+
+    // Clear multi-selection
+    clearMultiSelection() {
+        this.multiSelectedObjects = [];
+        this.redraw();
+    }
+
+    // Check if object is in multi-selection
+    isObjectMultiSelected(objectId) {
+        return this.multiSelectedObjects.includes(objectId);
+    }
+
+    // Setup pagination controls
+    setupPagination() {
+        const prevBtn = document.getElementById('prev-note');
+        const nextBtn = document.getElementById('next-note');
+        const counter = document.getElementById('note-counter');
+
+        if (prevBtn) {
+            prevBtn.addEventListener('click', () => this.previousNote());
+        }
+        if (nextBtn) {
+            nextBtn.addEventListener('click', () => this.nextNote());
+        }
+
+        // Update counter display
+        this.updatePaginationCounter();
+    }
+
+    // Update pagination counter display
+    updatePaginationCounter() {
+        const counter = document.getElementById('note-counter');
+        if (counter) {
+            counter.textContent = `${this.currentNoteIndex + 1}/${this.notes.length}`;
+        }
+
+        // Update button states
+        const prevBtn = document.getElementById('prev-note');
+        const nextBtn = document.getElementById('next-note');
+        if (prevBtn) {
+            prevBtn.disabled = this.currentNoteIndex === 0;
+        }
+        if (nextBtn) {
+            nextBtn.disabled = false; // Always enabled (creates new note)
+        }
     }
 
     // Change color of all strokes in an object
@@ -1275,17 +1403,17 @@ class Glassboard {
         window.glassboard.onFocusChange((focused) => {
             if (focused) {
                 this.app.classList.add('focused');
-                // Reapply background mode when focused
-                if (this.currentBgMode) {
-                    window.glassboard.setBackgroundMode(this.currentBgMode);
-                }
+                // Apply active background mode
+                window.glassboard.setBackgroundMode(this.settings.activeBgMode || 'transparent');
             } else {
                 this.app.classList.remove('focused');
                 // Deselect all text items when window loses focus
                 this.deselectAllText();
-                // Remove vibrancy when unfocused
-                window.glassboard.setBackgroundMode('transparent');
+                // Apply inactive background mode
+                window.glassboard.setBackgroundMode(this.settings.inactiveBgMode || 'transparent');
             }
+            // Apply appropriate opacity
+            this.applyBackgroundOpacity();
         });
     }
 
@@ -1964,15 +2092,63 @@ class Glassboard {
             }
         });
 
-        // Background mode options
+        // Active background mode options
         document.querySelectorAll('input[name="bg-mode"]').forEach(radio => {
             radio.addEventListener('change', (e) => {
                 const mode = e.target.value;
-                this.currentBgMode = mode;
-                this.app.dataset.bg = mode;
-                window.glassboard.setBackgroundMode(mode);
+                this.settings.activeBgMode = mode;
+                this.app.dataset.activeBg = mode;
+                if (this.app.classList.contains('focused')) {
+                    window.glassboard.setBackgroundMode(mode);
+                }
+                this.applyBackgroundOpacity();
+                this.autoSave();
             });
         });
+
+        // Inactive background mode options
+        document.querySelectorAll('input[name="inactive-bg-mode"]').forEach(radio => {
+            radio.addEventListener('change', (e) => {
+                const mode = e.target.value;
+                this.settings.inactiveBgMode = mode;
+                this.app.dataset.inactiveBg = mode;
+                if (!this.app.classList.contains('focused')) {
+                    window.glassboard.setBackgroundMode(mode);
+                }
+                this.applyBackgroundOpacity();
+                this.autoSave();
+            });
+        });
+
+        // Active opacity slider
+        const activeOpacitySlider = document.getElementById('setting-active-opacity');
+        const activeOpacityValue = document.getElementById('active-opacity-value');
+        if (activeOpacitySlider) {
+            activeOpacitySlider.addEventListener('input', (e) => {
+                const value = parseInt(e.target.value);
+                this.settings.activeOpacity = value;
+                if (activeOpacityValue) {
+                    activeOpacityValue.textContent = `${value}%`;
+                }
+                this.applyBackgroundOpacity();
+                this.autoSave();
+            });
+        }
+
+        // Inactive opacity slider
+        const inactiveOpacitySlider = document.getElementById('setting-inactive-opacity');
+        const inactiveOpacityValue = document.getElementById('inactive-opacity-value');
+        if (inactiveOpacitySlider) {
+            inactiveOpacitySlider.addEventListener('input', (e) => {
+                const value = parseInt(e.target.value);
+                this.settings.inactiveOpacity = value;
+                if (inactiveOpacityValue) {
+                    inactiveOpacityValue.textContent = `${value}%`;
+                }
+                this.applyBackgroundOpacity();
+                this.autoSave();
+            });
+        }
 
         // Clean slate setting
         const cleanSlateCheckbox = document.getElementById('setting-clean-slate');
@@ -1982,6 +2158,13 @@ class Glassboard {
                 this.autoSave();
             });
         }
+    }
+
+    // Apply background opacity based on focus state
+    applyBackgroundOpacity() {
+        const isFocused = this.app.classList.contains('focused');
+        const opacity = isFocused ? this.settings.activeOpacity : this.settings.inactiveOpacity;
+        this.app.style.setProperty('--bg-opacity', opacity / 100);
     }
 
     toggleSettings() {
@@ -2282,6 +2465,32 @@ class Glassboard {
                     if (zoomControls) {
                         zoomControls.style.display = this.settings.showZoomControls ? '' : 'none';
                     }
+
+                    // Restore background settings
+                    const activeBgRadio = document.querySelector(`input[name="bg-mode"][value="${this.settings.activeBgMode || 'transparent'}"]`);
+                    if (activeBgRadio) activeBgRadio.checked = true;
+                    this.app.dataset.activeBg = this.settings.activeBgMode || 'transparent';
+
+                    const inactiveBgRadio = document.querySelector(`input[name="inactive-bg-mode"][value="${this.settings.inactiveBgMode || 'transparent'}"]`);
+                    if (inactiveBgRadio) inactiveBgRadio.checked = true;
+                    this.app.dataset.inactiveBg = this.settings.inactiveBgMode || 'transparent';
+
+                    // Restore opacity settings
+                    const activeOpacitySlider = document.getElementById('setting-active-opacity');
+                    const activeOpacityValue = document.getElementById('active-opacity-value');
+                    if (activeOpacitySlider) {
+                        activeOpacitySlider.value = this.settings.activeOpacity || 100;
+                        if (activeOpacityValue) activeOpacityValue.textContent = `${this.settings.activeOpacity || 100}%`;
+                    }
+
+                    const inactiveOpacitySlider = document.getElementById('setting-inactive-opacity');
+                    const inactiveOpacityValue = document.getElementById('inactive-opacity-value');
+                    if (inactiveOpacitySlider) {
+                        inactiveOpacitySlider.value = this.settings.inactiveOpacity || 50;
+                        if (inactiveOpacityValue) inactiveOpacityValue.textContent = `${this.settings.inactiveOpacity || 50}%`;
+                    }
+
+                    this.applyBackgroundOpacity();
                 }
 
                 // Check if we should open with clean slate

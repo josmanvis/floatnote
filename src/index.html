@@ -133,6 +133,24 @@
         <!-- Container for text items -->
         <div id="text-container"></div>
 
+        <!-- Selection rectangle overlay -->
+        <div id="selection-rect"></div>
+
+        <!-- Pagination island (right side) -->
+        <div id="pagination-island">
+            <button id="prev-note" class="pagination-btn" title="Previous note ([)">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+                    <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/>
+                </svg>
+            </button>
+            <span id="note-counter">1/1</span>
+            <button id="next-note" class="pagination-btn" title="Next note (])">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+                    <path d="M8.59 16.59L10 18l6-6-6-6-1.41 1.41L13.17 12z"/>
+                </svg>
+            </button>
+        </div>
+
         <!-- Settings panel -->
         <div id="settings-panel" class="settings-panel">
             <div class="settings-header">
@@ -161,7 +179,7 @@
                 <div class="settings-section">
                     <h3>Appearance</h3>
                     <div class="settings-bg-options">
-                        <span class="settings-label">Background</span>
+                        <span class="settings-label">Active Background</span>
                         <div class="bg-option-group">
                             <label class="bg-option">
                                 <input type="radio" name="bg-mode" value="transparent" checked>
@@ -179,6 +197,36 @@
                                 <span>Dark</span>
                             </label>
                         </div>
+                    </div>
+                    <div class="settings-slider">
+                        <span class="settings-label">Active Opacity</span>
+                        <input type="range" id="setting-active-opacity" min="0" max="100" value="100">
+                        <span class="slider-value" id="active-opacity-value">100%</span>
+                    </div>
+                    <div class="settings-bg-options">
+                        <span class="settings-label">Inactive Background</span>
+                        <div class="bg-option-group">
+                            <label class="bg-option">
+                                <input type="radio" name="inactive-bg-mode" value="transparent" checked>
+                                <span class="bg-option-box transparent"></span>
+                                <span>Clear</span>
+                            </label>
+                            <label class="bg-option">
+                                <input type="radio" name="inactive-bg-mode" value="blur">
+                                <span class="bg-option-box blur"></span>
+                                <span>Blur</span>
+                            </label>
+                            <label class="bg-option">
+                                <input type="radio" name="inactive-bg-mode" value="dark">
+                                <span class="bg-option-box dark"></span>
+                                <span>Dark</span>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="settings-slider">
+                        <span class="settings-label">Inactive Opacity</span>
+                        <input type="range" id="setting-inactive-opacity" min="0" max="100" value="50">
+                        <span class="slider-value" id="inactive-opacity-value">50%</span>
                     </div>
                     <label class="settings-toggle">
                         <span>Show zoom controls</span>

@@ -1228,3 +1228,153 @@ input, textarea, [contenteditable="true"] {
     opacity: 1;
     visibility: visible;
 }
+
+/* Pagination island - right side */
+#pagination-island {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%) translateX(5px);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: rgba(40, 40, 40, 0.85);
+    border-radius: 20px;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.2s ease, transform 0.2s ease, visibility 0.2s;
+    z-index: 100;
+}
+
+#app:hover #pagination-island,
+#app.focused #pagination-island {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(-50%) translateX(0);
+}
+
+.pagination-btn {
+    width: 28px;
+    height: 28px;
+    border: none;
+    background: transparent;
+    color: white;
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s ease;
+}
+
+.pagination-btn:hover {
+    background: rgba(255, 255, 255, 0.15);
+}
+
+.pagination-btn:active {
+    background: rgba(255, 255, 255, 0.25);
+}
+
+.pagination-btn:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+#note-counter {
+    color: white;
+    font-size: 13px;
+    font-weight: 500;
+    min-width: 36px;
+    text-align: center;
+}
+
+/* Selection rectangle */
+#selection-rect {
+    position: absolute;
+    border: 2px dashed #3b82f6;
+    background: rgba(59, 130, 246, 0.1);
+    pointer-events: none;
+    z-index: 500;
+    display: none;
+}
+
+#selection-rect.active {
+    display: block;
+}
+
+/* Settings slider */
+.settings-slider {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 0;
+}
+
+.settings-slider .settings-label {
+    flex: 1;
+    margin-bottom: 0;
+}
+
+.settings-slider input[type="range"] {
+    width: 100px;
+    height: 4px;
+    -webkit-appearance: none;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 2px;
+    outline: none;
+}
+
+.settings-slider input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px;
+    height: 14px;
+    background: #3b82f6;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: transform 0.1s ease;
+}
+
+.settings-slider input[type="range"]::-webkit-slider-thumb:hover {
+    transform: scale(1.2);
+}
+
+.slider-value {
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 12px;
+    min-width: 40px;
+    text-align: right;
+}
+
+/* Active/Inactive background classes with opacity support */
+#app {
+    --bg-opacity: 1;
+}
+
+#app[data-active-bg="blur"].focused {
+    background: rgba(255, 255, 255, calc(0.1 * var(--bg-opacity)));
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+}
+
+#app[data-active-bg="dark"].focused {
+    background: rgba(30, 30, 30, calc(0.85 * var(--bg-opacity)));
+}
+
+#app[data-inactive-bg="blur"]:not(.focused) {
+    background: rgba(255, 255, 255, calc(0.1 * var(--bg-opacity)));
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+}
+
+#app[data-inactive-bg="dark"]:not(.focused) {
+    background: rgba(30, 30, 30, calc(0.85 * var(--bg-opacity)));
+}
+
+/* Multi-selection highlight */
+.multi-selected-stroke {
+    filter: drop-shadow(0 0 4px #3b82f6);
+}
