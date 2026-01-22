@@ -189,6 +189,22 @@ Keyboard shortcuts (when app is running):
       // Save version
       writeFileSync(VERSION_FILE, release.tag_name);
       log(`Floatnote ${release.tag_name} installed successfully!`);
+
+      // Create symlink in ~/Applications for Spotlight/Launchpad visibility
+      const userAppsDir = path.join(process.env.HOME, 'Applications');
+      try {
+        if (!existsSync(userAppsDir)) {
+          mkdirSync(userAppsDir, { recursive: true });
+        }
+        const symlinkPath = path.join(userAppsDir, 'Floatnote.app');
+        if (existsSync(symlinkPath)) {
+          unlinkSync(symlinkPath);
+        }
+        fs.symlinkSync(APP_PATH, symlinkPath);
+        log('Added to ~/Applications for Spotlight access.');
+      } catch (symlinkErr) {
+        log(`Note: Could not create ~/Applications symlink: ${symlinkErr.message}`);
+      }
     } else {
       log(`Floatnote ${currentVersion} is up to date.`);
     }

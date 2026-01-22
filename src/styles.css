@@ -28,13 +28,18 @@ input, textarea, [contenteditable="true"] {
     background: transparent;
     border-radius: 12px;
     overflow: hidden;
-    border: 3px solid transparent;
+    border: 3px solid rgba(160, 160, 160, 0.15);
     transition: border-color 0.2s ease, box-shadow 0.3s ease;
 }
 
 /* Light grey border when focused */
 #app.focused {
     border-color: rgba(160, 160, 160, 0.5);
+}
+
+/* Hide unfocused border when setting is enabled */
+#app.hide-unfocused-border:not(.focused) {
+    border-color: transparent;
 }
 
 /* Yellow border while resizing */
@@ -45,40 +50,7 @@ input, textarea, [contenteditable="true"] {
         0 0 30px rgba(250, 204, 21, 0.2);
 }
 
-/* Background modes - only apply when focused */
-#app.bg-transparent {
-    background: transparent;
-}
-
-#app.bg-blur {
-    background: transparent;
-}
-
-#app.bg-dark {
-    background: transparent;
-}
-
-/* Apply background only when focused */
-#app.focused.bg-blur {
-    background: rgba(128, 128, 128, 0.3);
-    backdrop-filter: blur(30px) saturate(180%);
-    -webkit-backdrop-filter: blur(30px) saturate(180%);
-}
-
-#app.focused.bg-dark {
-    background: rgba(20, 20, 20, 0.9);
-}
-
-/* Inactive background modes */
-#app.inactive-bg-blur:not(.focused) {
-    background: rgba(128, 128, 128, 0.2);
-    backdrop-filter: blur(20px) saturate(150%);
-    -webkit-backdrop-filter: blur(20px) saturate(150%);
-}
-
-#app.inactive-bg-dark:not(.focused) {
-    background: rgba(20, 20, 20, 0.7);
-}
+/* Background opacity controlled by --bg-opacity variable */
 
 /* Pin bounce animation */
 @keyframes pin-bounce {
@@ -1205,70 +1177,11 @@ input, textarea, [contenteditable="true"] {
     pointer-events: none;
 }
 
-/* Settings background options */
-.settings-bg-options {
-    padding: 10px 0;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-}
-
 .settings-label {
     color: white;
     font-size: 14px;
     display: block;
     margin-bottom: 10px;
-}
-
-.bg-option-group {
-    display: flex;
-    gap: 12px;
-}
-
-.bg-option {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 6px;
-    cursor: pointer;
-}
-
-.bg-option input {
-    display: none;
-}
-
-.bg-option-box {
-    width: 48px;
-    height: 32px;
-    border-radius: 6px;
-    border: 2px solid transparent;
-    transition: border-color 0.15s ease;
-}
-
-.bg-option-box.transparent {
-    background: linear-gradient(45deg, #333 25%, transparent 25%),
-                linear-gradient(-45deg, #333 25%, transparent 25%),
-                linear-gradient(45deg, transparent 75%, #333 75%),
-                linear-gradient(-45deg, transparent 75%, #333 75%);
-    background-size: 8px 8px;
-    background-position: 0 0, 0 4px, 4px -4px, -4px 0px;
-    background-color: #222;
-}
-
-.bg-option-box.blur {
-    background: linear-gradient(135deg, rgba(100, 100, 100, 0.5), rgba(150, 150, 150, 0.3));
-    backdrop-filter: blur(4px);
-}
-
-.bg-option-box.dark {
-    background: rgba(0, 0, 0, 0.7);
-}
-
-.bg-option input:checked + .bg-option-box {
-    border-color: #3b82f6;
-}
-
-.bg-option span:last-child {
-    color: rgba(255, 255, 255, 0.7);
-    font-size: 11px;
 }
 
 /* Note indicator */
@@ -1417,29 +1330,9 @@ input, textarea, [contenteditable="true"] {
     text-align: right;
 }
 
-/* Active/Inactive background classes with opacity support */
 #app {
-    --bg-opacity: 1;
-}
-
-#app[data-active-bg="blur"].focused {
-    background: rgba(255, 255, 255, calc(0.1 * var(--bg-opacity)));
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-}
-
-#app[data-active-bg="dark"].focused {
-    background: rgba(30, 30, 30, calc(0.85 * var(--bg-opacity)));
-}
-
-#app[data-inactive-bg="blur"]:not(.focused) {
-    background: rgba(255, 255, 255, calc(0.1 * var(--bg-opacity)));
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-}
-
-#app[data-inactive-bg="dark"]:not(.focused) {
-    background: rgba(30, 30, 30, calc(0.85 * var(--bg-opacity)));
+    --bg-opacity: 0.1;
+    background: rgba(255, 255, 255, var(--bg-opacity));
 }
 
 /* Multi-selection highlight */

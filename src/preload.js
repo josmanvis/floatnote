@@ -4,9 +4,6 @@ contextBridge.exposeInMainWorld('glassboard', {
     onFocusChange: (callback) => {
         ipcRenderer.on('window-focus', (event, focused) => callback(focused));
     },
-    onBackgroundModeChange: (callback) => {
-        ipcRenderer.on('background-mode-changed', (event, mode) => callback(mode));
-    },
     onWindowToggledOpen: (callback) => {
         ipcRenderer.on('window-toggled-open', () => callback());
     },
@@ -21,9 +18,6 @@ contextBridge.exposeInMainWorld('glassboard', {
     },
     setWindowSize: (size) => {
         ipcRenderer.send('set-window-size', size);
-    },
-    setBackgroundMode: (mode) => {
-        ipcRenderer.send('set-background-mode', mode);
     },
     // Clipboard access
     getClipboardContent: () => {

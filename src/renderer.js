@@ -49,11 +49,10 @@ class Glassboard {
             rotate: true,
             showZoomControls: true,
             openWithCleanSlate: false,
-            activeBgMode: 'transparent',
-            inactiveBgMode: 'transparent',
-            activeOpacity: 100,
-            inactiveOpacity: 50,
-            autoSaveToFolder: false
+            activeOpacity: 10,
+            inactiveOpacity: 10,
+            autoSaveToFolder: false,
+            hideUnfocusedBorder: false
         };
 
         // Selection rectangle state
@@ -371,9 +370,6 @@ class Glassboard {
             this.clear();
         });
 
-        // Background mode toggle
-        this.setupBackgroundToggle();
-
         // Pin toggle
         this.setupPinToggle();
 
@@ -447,30 +443,6 @@ class Glassboard {
         document.getElementById('zoom-reset').addEventListener('click', () => this.resetTransform());
     }
 
-    setupBackgroundToggle() {
-        const dropdownItems = document.querySelectorAll('.dropdown-item[data-bg]');
-
-        // Set initial background mode
-        this.app.classList.add('bg-transparent');
-        this.currentBgMode = 'transparent';
-
-        dropdownItems.forEach(item => {
-            item.addEventListener('click', () => {
-                // Update active state
-                dropdownItems.forEach(i => i.classList.remove('active'));
-                item.classList.add('active');
-
-                // Update background class
-                const bgMode = item.dataset.bg;
-                this.currentBgMode = bgMode;
-                this.app.classList.remove('bg-transparent', 'bg-blur', 'bg-dark');
-                this.app.classList.add(`bg-${bgMode}`);
-
-                // Tell main process to update vibrancy (for blur effect)
-                window.glassboard.setBackgroundMode(bgMode);
-            });
-        });
-    }
 
     setupDrawing() {
         const getPoint = (e) => {
@@ -1559,31 +1531,10 @@ class Glassboard {
                 // Deselect all text items when window loses focus
                 this.deselectAllText();
             }
-            // Apply background modes via CSS classes
-            this.applyBackgroundModes();
-            // Apply appropriate opacity
             this.applyBackgroundOpacity();
-            // Update native vibrancy based on current mode
-            const currentMode = focused
-                ? this.settings.activeBgMode
-                : this.settings.inactiveBgMode;
-            window.glassboard.setBackgroundMode(currentMode || 'transparent');
         });
     }
 
-    applyBackgroundModes() {
-        // Remove all background classes first
-        this.app.classList.remove('bg-transparent', 'bg-blur', 'bg-dark');
-        this.app.classList.remove('inactive-bg-transparent', 'inactive-bg-blur', 'inactive-bg-dark');
-
-        // Apply active background class
-        const activeMode = this.settings.activeBgMode || 'transparent';
-        this.app.classList.add(`bg-${activeMode}`);
-
-        // Apply inactive background class
-        const inactiveMode = this.settings.inactiveBgMode || 'transparent';
-        this.app.classList.add(`inactive-bg-${inactiveMode}`);
-    }
 
     setupResize() {
         // Add resize handles to window (corners and edges)
@@ -2544,34 +2495,14 @@ class Glassboard {
             this.autoSave();
         });
 
-        // Active background mode options
-        document.querySelectorAll('input[name="bg-mode"]').forEach(radio => {
-            radio.addEventListener('change', (e) => {
-                const mode = e.target.value;
-                this.settings.activeBgMode = mode;
-                this.app.dataset.activeBg = mode;
-                if (this.app.classList.contains('focused')) {
-                    window.glassboard.setBackgroundMode(mode);
-                }
-                this.applyBackgroundModes();
-                this.applyBackgroundOpacity();
-                this.autoSave();
-            });
-        });
-
-        // Inactive background mode options
-        document.querySelectorAll('input[name="inactive-bg-mode"]').forEach(radio => {
-            radio.addEventListener('change', (e) => {
-                const mode = e.target.value;
-                this.settings.inactiveBgMode = mode;
-                this.app.dataset.inactiveBg = mode;
-                if (!this.app.classList.contains('focused')) {
-                    window.glassboard.setBackgroundMode(mode);
-                }
-                this.applyBackgroundModes();
-                this.applyBackgroundOpacity();
-                this.autoSave();
-            });
+        document.getElementById('setting-hide-unfocused-border').addEventListener('change', (e) => {
+            this.settings.hideUnfocusedBorder = e.target.checked;
+            if (e.target.checked) {
+                this.app.classList.add('hide-unfocused-border');
+            } else {
+                this.app.classList.remove('hide-unfocused-border');
+            }
+            this.autoSave();
         });
 
         // Active opacity slider
@@ -3022,41 +2953,30 @@ class Glassboard {
                     if (zoomControls) {
                         zoomControls.style.display = this.settings.showZoomControls ? '' : 'none';
                     }
-
-                    // Restore background settings
-                    const activeBgRadio = document.querySelector(`input[name="bg-mode"][value="${this.settings.activeBgMode || 'transparent'}"]`);
-                    if (activeBgRadio) activeBgRadio.checked = true;
-                    this.app.dataset.activeBg = this.settings.activeBgMode || 'transparent';
-
-                    const inactiveBgRadio = document.querySelector(`input[name="inactive-bg-mode"][value="${this.settings.inactiveBgMode || 'transparent'}"]`);
-                    if (inactiveBgRadio) inactiveBgRadio.checked = true;
-                    this.app.dataset.inactiveBg = this.settings.inactiveBgMode || 'transparent';
+                    const hideUnfocusedBorderCheckbox = document.getElementById('setting-hide-unfocused-border');
+                    if (hideUnfocusedBorderCheckbox) {
+                        hideUnfocusedBorderCheckbox.checked = this.settings.hideUnfocusedBorder || false;
+                    }
+                    if (this.settings.hideUnfocusedBorder) {
+                        this.app.classList.add('hide-unfocused-border');
+                    }
 
                     // Restore opacity settings
                     const activeOpacitySlider = document.getElementById('setting-active-opacity');
                     const activeOpacityValue = document.getElementById('active-opacity-value');
                     if (activeOpacitySlider) {
-                        activeOpacitySlider.value = this.settings.activeOpacity || 100;
-                        if (activeOpacityValue) activeOpacityValue.textContent = `${this.settings.activeOpacity || 100}%`;
+                        activeOpacitySlider.value = this.settings.activeOpacity || 10;
+                        if (activeOpacityValue) activeOpacityValue.textContent = `${this.settings.activeOpacity || 10}%`;
                     }
 
                     const inactiveOpacitySlider = document.getElementById('setting-inactive-opacity');
                     const inactiveOpacityValue = document.getElementById('inactive-opacity-value');
                     if (inactiveOpacitySlider) {
-                        inactiveOpacitySlider.value = this.settings.inactiveOpacity || 50;
-                        if (inactiveOpacityValue) inactiveOpacityValue.textContent = `${this.settings.inactiveOpacity || 50}%`;
+                        inactiveOpacitySlider.value = this.settings.inactiveOpacity || 10;
+                        if (inactiveOpacityValue) inactiveOpacityValue.textContent = `${this.settings.inactiveOpacity || 10}%`;
                     }
 
-                    this.applyBackgroundModes();
                     this.applyBackgroundOpacity();
-
-                    // Apply native vibrancy based on restored settings
-                    const currentBgMode = this.app.classList.contains('focused')
-                        ? this.settings.activeBgMode
-                        : this.settings.inactiveBgMode;
-                    if (currentBgMode === 'blur') {
-                        window.glassboard.setBackgroundMode('blur');
-                    }
                 }
 
                 // Check if we should open with clean slate

@@ -2,7 +2,14 @@
 .claude/
 node_modules/
 dist/
+.build/
 .npm-cache/
 *.log
 .DS_Store
 coverage/
+.env
+mac-arm64/
+*.dmg
+*.zip
+*.blockmap
+*.tgz

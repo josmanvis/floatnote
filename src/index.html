@@ -184,59 +184,24 @@
                 </div>
                 <div class="settings-section">
                     <h3>Appearance</h3>
-                    <div class="settings-bg-options">
-                        <span class="settings-label">Active Background</span>
-                        <div class="bg-option-group">
-                            <label class="bg-option">
-                                <input type="radio" name="bg-mode" value="transparent" checked>
-                                <span class="bg-option-box transparent"></span>
-                                <span>Clear</span>
-                            </label>
-                            <label class="bg-option">
-                                <input type="radio" name="bg-mode" value="blur">
-                                <span class="bg-option-box blur"></span>
-                                <span>Blur</span>
-                            </label>
-                            <label class="bg-option">
-                                <input type="radio" name="bg-mode" value="dark">
-                                <span class="bg-option-box dark"></span>
-                                <span>Dark</span>
-                            </label>
-                        </div>
-                    </div>
                     <div class="settings-slider">
                         <span class="settings-label">Active Opacity</span>
-                        <input type="range" id="setting-active-opacity" min="0" max="100" value="100">
-                        <span class="slider-value" id="active-opacity-value">100%</span>
-                    </div>
-                    <div class="settings-bg-options">
-                        <span class="settings-label">Inactive Background</span>
-                        <div class="bg-option-group">
-                            <label class="bg-option">
-                                <input type="radio" name="inactive-bg-mode" value="transparent" checked>
-                                <span class="bg-option-box transparent"></span>
-                                <span>Clear</span>
-                            </label>
-                            <label class="bg-option">
-                                <input type="radio" name="inactive-bg-mode" value="blur">
-                                <span class="bg-option-box blur"></span>
-                                <span>Blur</span>
-                            </label>
-                            <label class="bg-option">
-                                <input type="radio" name="inactive-bg-mode" value="dark">
-                                <span class="bg-option-box dark"></span>
-                                <span>Dark</span>
-                            </label>
-                        </div>
+                        <input type="range" id="setting-active-opacity" min="0" max="100" value="10">
+                        <span class="slider-value" id="active-opacity-value">10%</span>
                     </div>
                     <div class="settings-slider">
                         <span class="settings-label">Inactive Opacity</span>
-                        <input type="range" id="setting-inactive-opacity" min="0" max="100" value="50">
-                        <span class="slider-value" id="inactive-opacity-value">50%</span>
+                        <input type="range" id="setting-inactive-opacity" min="0" max="100" value="10">
+                        <span class="slider-value" id="inactive-opacity-value">10%</span>
                     </div>
                     <label class="settings-toggle">
                         <span>Show zoom controls</span>
                         <input type="checkbox" id="setting-zoom-controls" checked>
+                        <span class="toggle-slider"></span>
+                    </label>
+                    <label class="settings-toggle">
+                        <span>Hide border when inactive</span>
+                        <input type="checkbox" id="setting-hide-unfocused-border">
                         <span class="toggle-slider"></span>
                     </label>
                 </div>
