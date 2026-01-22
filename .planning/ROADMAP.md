@@ -12,7 +12,7 @@ Floatnote has a working app with no automated quality gates or distribution pipe
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Integration Tests** - IPC and preload bridge contracts verified with real source code
+- [x] **Phase 1: Integration Tests** - IPC and preload bridge contracts verified with real source code
 - [ ] **Phase 2: E2E Tests** - Core user flows verified in real Electron app via Playwright
 - [ ] **Phase 3: CI/CD Pipeline** - Automated testing, building, and releasing on GitHub Actions
 - [ ] **Phase 4: npm Publishing** - CLI-only package published to npm, downloads app from Releases
@@ -31,8 +31,8 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Plans:** 2 plans
 
 Plans:
-- [ ] 01-01-PLAN.md -- IPC round-trip integration tests (save/load, export, window mgmt)
-- [ ] 01-02-PLAN.md -- Preload bridge API verification tests
+- [x] 01-01-PLAN.md -- IPC round-trip integration tests (save/load, export, window mgmt)
+- [x] 01-02-PLAN.md -- Preload bridge API verification tests
 
 ### Phase 2: E2E Tests
 **Goal**: Core user-facing flows work end-to-end in a real Electron app instance
@@ -90,7 +90,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Integration Tests | 0/2 | Not started | - |
+| 1. Integration Tests | 2/2 | Complete | 2026-01-22 |
 | 2. E2E Tests | 0/3 | Not started | - |
 | 3. CI/CD Pipeline | 0/2 | Not started | - |
 | 4. npm Publishing | 0/2 | Not started | - |
