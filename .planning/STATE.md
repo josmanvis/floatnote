@@ -12,7 +12,7 @@ See: .planning/PROJECT.md (updated 2026-01-22)
 Phase: 1 of 4 (Integration Tests)
 Plan: 0 of 2 in current phase
 Status: Ready to plan
-Last activity: 2026-01-22 -- Roadmap created
+Last activity: 2026-01-22 -- Completed quick task 001: Fix opacity bg color
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -54,6 +54,12 @@ None yet.
 ### Blockers/Concerns
 
 None yet.
+
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 001 | Fix opacity settings bg color from white to black | 2026-01-22 | d8a30dd | [001-the-opacity-settings-are-using-a-bg-colo](./quick/001-the-opacity-settings-are-using-a-bg-colo/) |
 
 ## Session Continuity
 
