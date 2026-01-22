@@ -28,11 +28,11 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. Integration tests verify window management IPC (set-pinned, set-window-size, set-background-mode) triggers correct BrowserWindow method calls
   3. Integration tests verify preload bridge exposes all APIs that renderer.js actually calls (save, load, export, clipboard, window controls)
   4. All integration tests pass without launching an Electron window (fast, CI-friendly)
-**Plans**: TBD
+**Plans:** 2 plans
 
 Plans:
-- [ ] 01-01: IPC round-trip integration tests (save/load, export, window mgmt)
-- [ ] 01-02: Preload bridge API verification tests
+- [ ] 01-01-PLAN.md -- IPC round-trip integration tests (save/load, export, window mgmt)
+- [ ] 01-02-PLAN.md -- Preload bridge API verification tests
 
 ### Phase 2: E2E Tests
 **Goal**: Core user-facing flows work end-to-end in a real Electron app instance
