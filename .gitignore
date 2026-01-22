@@ -1,3 +1,5 @@
+.beads/
+.claude/
 node_modules/
 dist/
 .npm-cache/

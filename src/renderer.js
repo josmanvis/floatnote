@@ -103,6 +103,7 @@ class Glassboard {
         this.setupClipboardPaste();
         this.setupSettings();
         this.setupGestures();
+        this.setupFileDrop();
 
         // Initialize with empty note if needed
         if (this.notes.length === 0) {
@@ -117,6 +118,9 @@ class Glassboard {
 
         // Setup pagination controls
         this.setupPagination();
+
+        // Setup window toggle handler for clean slate
+        this.setupWindowToggleHandler();
     }
 
     // Note management - getters for current note's data
@@ -147,12 +151,28 @@ class Glassboard {
         }
     }
 
+    get attachments() {
+        return this.notes[this.currentNoteIndex]?.attachments || [];
+    }
+    set attachments(value) {
+        if (this.notes[this.currentNoteIndex]) {
+            this.notes[this.currentNoteIndex].attachments = value;
+        }
+    }
+
     createEmptyNote() {
+        // Get viewport dimensions for origin calculation
+        const rect = this.canvas?.getBoundingClientRect() || { width: 800, height: 600 };
+        const zoom = this.zoomLevel || 1;
         return {
             id: Date.now().toString(),
             lines: [],
             textItems: [],
             images: [],
+            attachments: [],
+            // Store the origin point in content-space (center of viewport when note was created)
+            originX: (rect.width / 2) / zoom,
+            originY: (rect.height / 2) / zoom,
             createdAt: Date.now(),
             lastModified: Date.now()
         };
@@ -369,7 +389,27 @@ class Glassboard {
         if (pinCheckbox) {
             pinCheckbox.addEventListener('change', () => {
                 window.glassboard.setPinned(pinCheckbox.checked);
+                this.animatePinIcon();
             });
+        }
+    }
+
+    togglePin() {
+        const pinCheckbox = document.getElementById('pin-checkbox');
+        if (pinCheckbox) {
+            pinCheckbox.checked = !pinCheckbox.checked;
+            window.glassboard.setPinned(pinCheckbox.checked);
+            this.animatePinIcon();
+        }
+    }
+
+    animatePinIcon() {
+        const pinToggle = document.querySelector('.pin-toggle');
+        if (pinToggle) {
+            pinToggle.classList.add('animate');
+            setTimeout(() => {
+                pinToggle.classList.remove('animate');
+            }, 400);
         }
     }
 
@@ -398,13 +438,13 @@ class Glassboard {
             <button class="zoom-btn" id="zoom-out" title="Zoom out (Cmd+-)">−</button>
             <span id="zoom-indicator">100%</span>
             <button class="zoom-btn" id="zoom-in" title="Zoom in (Cmd++)">+</button>
-            <button class="zoom-btn" id="zoom-reset" title="Reset zoom (Cmd+0)">⟲</button>
+            <button class="zoom-btn" id="zoom-reset" title="Reset view (Cmd+0)">⟲</button>
         `;
         this.app.appendChild(zoomControls);
 
         document.getElementById('zoom-out').addEventListener('click', () => this.zoomOut());
         document.getElementById('zoom-in').addEventListener('click', () => this.zoomIn());
-        document.getElementById('zoom-reset').addEventListener('click', () => this.resetZoom());
+        document.getElementById('zoom-reset').addEventListener('click', () => this.resetTransform());
     }
 
     setupBackgroundToggle() {
@@ -672,6 +712,7 @@ class Glassboard {
     setupPagination() {
         const prevBtn = document.getElementById('prev-note');
         const nextBtn = document.getElementById('next-note');
+        const newNoteBtn = document.getElementById('new-note');
         const counter = document.getElementById('note-counter');
 
         if (prevBtn) {
@@ -680,8 +721,21 @@ class Glassboard {
         if (nextBtn) {
             nextBtn.addEventListener('click', () => this.nextNote());
         }
+        if (newNoteBtn) {
+            newNoteBtn.addEventListener('click', () => this.createNewNoteAndSwitch());
+        }
 
         // Update counter display
+        this.updatePaginationCounter();
+    }
+
+    // Create a new note and switch to it
+    createNewNoteAndSwitch() {
+        this.saveCurrentNoteState();
+        this.notes.push(this.createEmptyNote());
+        this.currentNoteIndex = this.notes.length - 1;
+        this.loadCurrentNote();
+        this.updateNoteIndicator();
         this.updatePaginationCounter();
     }
 
@@ -703,6 +757,40 @@ class Glassboard {
         }
     }
 
+    // Handle window toggle for clean slate mode
+    setupWindowToggleHandler() {
+        if (window.glassboard?.onWindowToggledOpen) {
+            window.glassboard.onWindowToggledOpen(() => {
+                this.handleWindowToggledOpen();
+            });
+        }
+    }
+
+    handleWindowToggledOpen() {
+        // Only activate clean slate behavior if setting is enabled
+        if (!this.settings.openWithCleanSlate) {
+            return;
+        }
+
+        // Create a new blank note
+        this.notes.push(this.createEmptyNote());
+        this.currentNoteIndex = this.notes.length - 1;
+        this.updatePaginationCounter();
+        this.redraw();
+
+        // Switch to text mode
+        this.setMode('text');
+
+        // Create a text item at top-left (under window controls)
+        // Position: x=20 (left margin), y=50 (below toolbar)
+        const x = 20;
+        const y = 50;
+        this.createTextItem(x, y);
+
+        // Save state
+        this.saveState();
+    }
+
     // Change color of all strokes in an object
     changeObjectColor(objectId, color) {
         this.lines.forEach(line => {
@@ -722,9 +810,9 @@ class Glassboard {
         const element = this.textContainer.querySelector(`[data-id="${textId}"]`);
         if (element) {
             element.style.color = color;
-            const textarea = element.querySelector('.text-input');
-            if (textarea) {
-                textarea.style.color = color;
+            const editor = element.querySelector('.text-input');
+            if (editor) {
+                editor.style.color = color;
             }
         }
     }
@@ -753,18 +841,13 @@ class Glassboard {
         if (!textItem) return;
 
         const element = this.textContainer.querySelector(`[data-id="${textId}"]`);
-        const textarea = element?.querySelector('.text-input');
+        const editor = element?.querySelector('.text-input');
 
         this.clipboard = {
             type: 'text',
             data: {
-                text: textItem.text,
-                color: textItem.color,
-                styles: {
-                    fontWeight: textarea?.style.fontWeight || 'normal',
-                    fontStyle: textarea?.style.fontStyle || 'normal',
-                    textDecoration: textarea?.style.textDecoration || 'none'
-                }
+                content: editor?.innerHTML || textItem.content || '',
+                color: textItem.color
             }
         };
     }
@@ -819,6 +902,9 @@ class Glassboard {
             item.style.left = (x + pasteOffset) + 'px';
             item.style.top = (y + pasteOffset) + 'px';
             item.style.color = this.clipboard.data.color;
+            // Apply counter-scale so text doesn't zoom
+            item.style.transform = `scale(${1 / this.zoomLevel})`;
+            item.style.transformOrigin = 'top left';
 
             // Add drag handle
             const dragHandle = document.createElement('div');
@@ -840,30 +926,13 @@ class Glassboard {
                 <button class="format-btn delete-btn" title="Delete">✕</button>
             `;
 
-            // Create textarea
-            const textarea = document.createElement('textarea');
-            textarea.className = 'text-input';
-            textarea.value = this.clipboard.data.text;
-            textarea.style.color = this.clipboard.data.color;
-            textarea.rows = 1;
-
-            // Apply copied styles
-            if (this.clipboard.data.styles) {
-                textarea.style.fontWeight = this.clipboard.data.styles.fontWeight;
-                textarea.style.fontStyle = this.clipboard.data.styles.fontStyle;
-                textarea.style.textDecoration = this.clipboard.data.styles.textDecoration;
-
-                // Update format buttons to reflect active styles
-                if (this.clipboard.data.styles.fontWeight === 'bold') {
-                    formatBar.querySelector('[data-format="bold"]').classList.add('active');
-                }
-                if (this.clipboard.data.styles.fontStyle === 'italic') {
-                    formatBar.querySelector('[data-format="italic"]').classList.add('active');
-                }
-                if (this.clipboard.data.styles.textDecoration === 'underline') {
-                    formatBar.querySelector('[data-format="underline"]').classList.add('active');
-                }
-            }
+            // Create contentEditable div
+            const editor = document.createElement('div');
+            editor.className = 'text-input';
+            editor.contentEditable = 'true';
+            // Support both old 'text' and new 'content' formats
+            editor.innerHTML = this.clipboard.data.content || this.clipboard.data.text || '';
+            editor.style.color = this.clipboard.data.color;
 
             // Add resize handle
             const resizeHandle = document.createElement('div');
@@ -871,7 +940,7 @@ class Glassboard {
 
             item.appendChild(dragHandle);
             item.appendChild(formatBar);
-            item.appendChild(textarea);
+            item.appendChild(editor);
             item.appendChild(resizeHandle);
             this.textContainer.appendChild(item);
 
@@ -879,57 +948,61 @@ class Glassboard {
                 id,
                 x: x + pasteOffset,
                 y: y + pasteOffset,
-                text: this.clipboard.data.text,
-                color: this.clipboard.data.color,
-                styles: this.clipboard.data.styles
+                content: this.clipboard.data.content || this.clipboard.data.text || '',
+                color: this.clipboard.data.color
             });
 
             // Setup event handlers for the new text item
-            this.setupPastedTextItem(item, id, textarea, formatBar);
+            this.setupPastedTextItem(item, id, editor, formatBar);
 
             // Select the pasted item
             this.deselectAllText();
             this.selectedTextId = id;
-            textarea.focus();
-
-            // Auto-grow
-            textarea.style.height = 'auto';
-            textarea.style.height = textarea.scrollHeight + 'px';
+            editor.focus();
         }
     }
 
-    // Setup event handlers for a pasted text item
-    setupPastedTextItem(item, id, textarea, formatBar) {
-        // Auto-grow textarea
-        const autoGrow = () => {
-            textarea.style.height = 'auto';
-            textarea.style.height = textarea.scrollHeight + 'px';
-        };
-
+    // Setup event handlers for a pasted/restored text item
+    setupPastedTextItem(item, id, editor, formatBar) {
         // Handle input changes
-        textarea.addEventListener('input', () => {
+        editor.addEventListener('input', () => {
             const textItem = this.textItems.find(t => t.id === id);
             if (textItem) {
-                textItem.text = textarea.value;
+                textItem.content = editor.innerHTML;
             }
-            autoGrow();
         });
 
-        // Handle delete on empty backspace
-        textarea.addEventListener('keydown', (e) => {
-            if (e.key === 'Backspace' && textarea.value === '') {
+        // Handle delete on empty backspace and rich text shortcuts
+        editor.addEventListener('keydown', (e) => {
+            if (e.key === 'Backspace' && editor.textContent.trim() === '') {
                 e.preventDefault();
                 this.deleteTextItem(id);
             }
+            // Rich text keyboard shortcuts
+            if (e.metaKey && !e.shiftKey) {
+                if (e.key === 'b') {
+                    e.preventDefault();
+                    document.execCommand('bold', false, null);
+                    this.updateFormatButtonStates(formatBar);
+                } else if (e.key === 'i') {
+                    e.preventDefault();
+                    document.execCommand('italic', false, null);
+                    this.updateFormatButtonStates(formatBar);
+                } else if (e.key === 'u') {
+                    e.preventDefault();
+                    document.execCommand('underline', false, null);
+                    this.updateFormatButtonStates(formatBar);
+                }
+            }
         });
 
-        // Format button handlers
+        // Format button handlers - use execCommand for selection-based formatting
         formatBar.querySelectorAll('.format-btn[data-format]').forEach(btn => {
             btn.addEventListener('mousedown', (e) => {
                 e.preventDefault();
                 const format = btn.dataset.format;
-                btn.classList.toggle('active');
-                this.applyTextFormat(textarea, format, btn.classList.contains('active'));
+                document.execCommand(format, false, null);
+                this.updateFormatButtonStates(formatBar);
             });
         });
 
@@ -941,13 +1014,17 @@ class Glassboard {
         });
 
         // Delete empty text item when clicking away
-        textarea.addEventListener('blur', () => {
+        editor.addEventListener('blur', () => {
             setTimeout(() => {
-                if (textarea.value.trim() === '') {
+                if (editor.textContent.trim() === '') {
                     this.deleteTextItem(id);
                 }
             }, 100);
         });
+
+        // Update format button states when selection changes
+        editor.addEventListener('mouseup', () => this.updateFormatButtonStates(formatBar));
+        editor.addEventListener('keyup', () => this.updateFormatButtonStates(formatBar));
 
         // Add resize handle if not already present
         let resizeHandle = item.querySelector('.text-resize-handle');
@@ -997,6 +1074,9 @@ class Glassboard {
         item.style.left = x + 'px';
         item.style.top = y + 'px';
         item.style.color = this.currentColor;
+        // Apply counter-scale so text doesn't zoom
+        item.style.transform = `scale(${1 / this.zoomLevel})`;
+        item.style.transformOrigin = 'top left';
 
         // Add drag handle with move icon
         const dragHandle = document.createElement('div');
@@ -1018,12 +1098,12 @@ class Glassboard {
             <button class="format-btn delete-btn" title="Delete">✕</button>
         `;
 
-        // Use textarea for multiline support
-        const textarea = document.createElement('textarea');
-        textarea.className = 'text-input';
-        textarea.placeholder = 'Type here...';
-        textarea.style.color = this.currentColor;
-        textarea.rows = 1;
+        // Use contentEditable div for rich text support
+        const editor = document.createElement('div');
+        editor.className = 'text-input';
+        editor.contentEditable = 'true';
+        editor.dataset.placeholder = 'Type here...';
+        editor.style.color = this.currentColor;
 
         // Add resize handle
         const resizeHandle = document.createElement('div');
@@ -1031,46 +1111,55 @@ class Glassboard {
 
         item.appendChild(dragHandle);
         item.appendChild(formatBar);
-        item.appendChild(textarea);
+        item.appendChild(editor);
         item.appendChild(resizeHandle);
         this.textContainer.appendChild(item);
 
-        this.textItems.push({ id, x, y, text: '', color: this.currentColor, styles: {} });
+        this.textItems.push({ id, x, y, content: '', color: this.currentColor });
         this.selectedTextId = id;
 
-        // Focus textarea
-        textarea.focus();
-
-        // Auto-grow textarea
-        const autoGrow = () => {
-            textarea.style.height = 'auto';
-            textarea.style.height = textarea.scrollHeight + 'px';
-        };
+        // Focus editor
+        editor.focus();
 
         // Handle input changes
-        textarea.addEventListener('input', () => {
+        editor.addEventListener('input', () => {
             const textItem = this.textItems.find(t => t.id === id);
             if (textItem) {
-                textItem.text = textarea.value;
+                textItem.content = editor.innerHTML;
             }
-            autoGrow();
         });
 
         // Handle delete on empty backspace
-        textarea.addEventListener('keydown', (e) => {
-            if (e.key === 'Backspace' && textarea.value === '') {
+        editor.addEventListener('keydown', (e) => {
+            if (e.key === 'Backspace' && editor.textContent.trim() === '') {
                 e.preventDefault();
                 this.deleteTextItem(id);
             }
+            // Rich text keyboard shortcuts
+            if (e.metaKey && !e.shiftKey) {
+                if (e.key === 'b') {
+                    e.preventDefault();
+                    document.execCommand('bold', false, null);
+                    this.updateFormatButtonStates(formatBar);
+                } else if (e.key === 'i') {
+                    e.preventDefault();
+                    document.execCommand('italic', false, null);
+                    this.updateFormatButtonStates(formatBar);
+                } else if (e.key === 'u') {
+                    e.preventDefault();
+                    document.execCommand('underline', false, null);
+                    this.updateFormatButtonStates(formatBar);
+                }
+            }
         });
 
-        // Format button handlers
+        // Format button handlers - use execCommand for selection-based formatting
         formatBar.querySelectorAll('.format-btn[data-format]').forEach(btn => {
             btn.addEventListener('mousedown', (e) => {
                 e.preventDefault(); // Prevent focus loss
                 const format = btn.dataset.format;
-                btn.classList.toggle('active');
-                this.applyTextFormat(textarea, format, btn.classList.contains('active'));
+                document.execCommand(format, false, null);
+                this.updateFormatButtonStates(formatBar);
             });
         });
 
@@ -1082,13 +1171,17 @@ class Glassboard {
         });
 
         // Delete empty text item when clicking away
-        textarea.addEventListener('blur', () => {
+        editor.addEventListener('blur', () => {
             setTimeout(() => {
-                if (textarea.value.trim() === '') {
+                if (editor.textContent.trim() === '') {
                     this.deleteTextItem(id);
                 }
             }, 100); // Small delay to allow format button clicks
         });
+
+        // Update format button states when selection changes
+        editor.addEventListener('mouseup', () => this.updateFormatButtonStates(formatBar));
+        editor.addEventListener('keyup', () => this.updateFormatButtonStates(formatBar));
 
         // Setup drag and resize
         this.setupTextItemDrag(item, id);
@@ -1101,14 +1194,20 @@ class Glassboard {
         });
     }
 
-    applyTextFormat(textarea, format, active) {
-        const styles = {
-            bold: { fontWeight: active ? 'bold' : 'normal' },
-            italic: { fontStyle: active ? 'italic' : 'normal' },
-            underline: { textDecoration: active ? 'underline' : 'none' }
-        };
-        if (styles[format]) {
-            Object.assign(textarea.style, styles[format]);
+    updateFormatButtonStates(formatBar) {
+        // Update format button active states based on current selection
+        const boldBtn = formatBar.querySelector('[data-format="bold"]');
+        const italicBtn = formatBar.querySelector('[data-format="italic"]');
+        const underlineBtn = formatBar.querySelector('[data-format="underline"]');
+
+        if (boldBtn) {
+            boldBtn.classList.toggle('active', document.queryCommandState('bold'));
+        }
+        if (italicBtn) {
+            italicBtn.classList.toggle('active', document.queryCommandState('italic'));
+        }
+        if (underlineBtn) {
+            underlineBtn.classList.toggle('active', document.queryCommandState('underline'));
         }
     }
 
@@ -1117,7 +1216,7 @@ class Glassboard {
         let startX, startY, origX, origY;
 
         const startDrag = (e) => {
-            // Don't drag from textarea, format buttons, or resize handle
+            // Don't drag from text editor, format buttons, or resize handle
             if (e.target.closest('.text-input') || e.target.closest('.format-btn') || e.target.closest('.text-resize-handle')) return;
             e.preventDefault();
             isDragging = true;
@@ -1184,10 +1283,10 @@ class Glassboard {
             element.style.width = newWidth + 'px';
             element.style.minHeight = newHeight + 'px';
 
-            // Update textarea width to match
-            const textarea = element.querySelector('.text-input');
-            if (textarea) {
-                textarea.style.width = '100%';
+            // Update editor width to match
+            const editor = element.querySelector('.text-input');
+            if (editor) {
+                editor.style.width = '100%';
             }
         });
 
@@ -1212,9 +1311,9 @@ class Glassboard {
         const element = this.textContainer.querySelector(`[data-id="${id}"]`);
         if (element) {
             element.classList.add('selected');
-            const textarea = element.querySelector('.text-input');
-            if (textarea) {
-                textarea.focus();
+            const editor = element.querySelector('.text-input');
+            if (editor) {
+                editor.focus();
             }
         }
     }
@@ -1243,6 +1342,12 @@ class Glassboard {
             // Check if we're in a text input
             const isInTextInput = e.target.closest('.text-input');
 
+            // Cmd+N - do nothing (prevent default new window behavior)
+            if ((e.metaKey || e.ctrlKey) && e.key === 'n') {
+                e.preventDefault();
+                return;
+            }
+
             // Cmd+W to close window
             if ((e.metaKey || e.ctrlKey) && e.key === 'w') {
                 e.preventDefault();
@@ -1261,6 +1366,13 @@ class Glassboard {
             if ((e.metaKey || e.ctrlKey) && e.key === ',') {
                 e.preventDefault();
                 this.toggleSettings();
+                return;
+            }
+
+            // Cmd+P to toggle pin
+            if ((e.metaKey || e.ctrlKey) && e.key === 'p') {
+                e.preventDefault();
+                this.togglePin();
                 return;
             }
 
@@ -1354,10 +1466,10 @@ class Glassboard {
                 return;
             }
 
-            // Cmd+0 to reset zoom
+            // Cmd+0 to reset view (zoom, pan, rotation)
             if ((e.metaKey || e.ctrlKey) && e.key === '0') {
                 e.preventDefault();
-                this.resetZoom();
+                this.resetTransform();
                 return;
             }
 
@@ -1369,15 +1481,15 @@ class Glassboard {
 
             // Note navigation (only when not in text input)
             if (!isInTextInput) {
-                // [ to go to previous note
-                if (e.key === '[') {
+                // [ or ArrowLeft to go to previous note
+                if (e.key === '[' || e.key === 'ArrowLeft') {
                     e.preventDefault();
                     this.previousNote();
                     return;
                 }
 
-                // ] to go to next note or create new one
-                if (e.key === ']') {
+                // ] or ArrowRight to go to next note or create new one
+                if (e.key === ']' || e.key === 'ArrowRight') {
                     e.preventDefault();
                     this.nextNote();
                     return;
@@ -1398,20 +1510,28 @@ class Glassboard {
                     this.setMode('text');
                     return;
                 }
-                // Size shortcuts: 1=sm, 2=md, 3=lg
-                if (e.key === '1') {
+                // Size shortcuts: Cmd+1=sm, Cmd+2=md, Cmd+3=lg
+                if (e.metaKey && e.key === '1') {
+                    e.preventDefault();
                     window.glassboard.setWindowSize('sm');
                     this.updateSizeDropdown('sm');
                     return;
                 }
-                if (e.key === '2') {
+                if (e.metaKey && e.key === '2') {
+                    e.preventDefault();
                     window.glassboard.setWindowSize('md');
                     this.updateSizeDropdown('md');
                     return;
                 }
-                if (e.key === '3') {
+                if (e.metaKey && e.key === '3') {
+                    e.preventDefault();
                     window.glassboard.setWindowSize('lg');
                     this.updateSizeDropdown('lg');
+                    return;
+                }
+                // N for new note
+                if (e.key === 'n' || e.key === 'N') {
+                    this.createNewNoteAndSwitch();
                     return;
                 }
             }
@@ -1434,18 +1554,35 @@ class Glassboard {
         window.glassboard.onFocusChange((focused) => {
             if (focused) {
                 this.app.classList.add('focused');
-                // Apply active background mode
-                window.glassboard.setBackgroundMode(this.settings.activeBgMode || 'transparent');
             } else {
                 this.app.classList.remove('focused');
                 // Deselect all text items when window loses focus
                 this.deselectAllText();
-                // Apply inactive background mode
-                window.glassboard.setBackgroundMode(this.settings.inactiveBgMode || 'transparent');
             }
+            // Apply background modes via CSS classes
+            this.applyBackgroundModes();
             // Apply appropriate opacity
             this.applyBackgroundOpacity();
+            // Update native vibrancy based on current mode
+            const currentMode = focused
+                ? this.settings.activeBgMode
+                : this.settings.inactiveBgMode;
+            window.glassboard.setBackgroundMode(currentMode || 'transparent');
         });
+    }
+
+    applyBackgroundModes() {
+        // Remove all background classes first
+        this.app.classList.remove('bg-transparent', 'bg-blur', 'bg-dark');
+        this.app.classList.remove('inactive-bg-transparent', 'inactive-bg-blur', 'inactive-bg-dark');
+
+        // Apply active background class
+        const activeMode = this.settings.activeBgMode || 'transparent';
+        this.app.classList.add(`bg-${activeMode}`);
+
+        // Apply inactive background class
+        const inactiveMode = this.settings.inactiveBgMode || 'transparent';
+        this.app.classList.add(`inactive-bg-${inactiveMode}`);
     }
 
     setupResize() {
@@ -1510,6 +1647,14 @@ class Glassboard {
         this.textContainer.style.transform = transform;
         this.textContainer.style.transformOrigin = 'center center';
 
+        // Counter-scale text items so they maintain visual size
+        // Text items should move with pan/zoom but not change visual size
+        const counterScale = 1 / this.zoomLevel;
+        this.textContainer.querySelectorAll('.text-item').forEach(item => {
+            item.style.transform = `scale(${counterScale})`;
+            item.style.transformOrigin = 'top left';
+        });
+
         // Update zoom indicator if exists
         const zoomIndicator = document.getElementById('zoom-indicator');
         if (zoomIndicator) {
@@ -1570,7 +1715,7 @@ class Glassboard {
                     <span class="shortcut">⌘-</span>
                 </button>
                 <button class="context-menu-item" data-action="reset-zoom">
-                    <span>Reset Zoom</span>
+                    <span>Reset View</span>
                     <span class="shortcut">⌘0</span>
                 </button>
                 <div class="context-menu-divider"></div>
@@ -1596,7 +1741,7 @@ class Glassboard {
             });
 
             menu.querySelector('[data-action="reset-zoom"]').addEventListener('click', () => {
-                this.resetZoom();
+                this.resetTransform();
                 this.hideContextMenu();
             });
 
@@ -1672,6 +1817,9 @@ class Glassboard {
         const rect = this.canvas.getBoundingClientRect();
         this.ctx.clearRect(0, 0, rect.width / this.zoomLevel, rect.height / this.zoomLevel);
 
+        // Draw center origin dot (2x2px, zoom-independent)
+        this.drawCenterDot();
+
         // Draw all saved lines
         this.lines.forEach(line => this.drawLine(line));
 
@@ -1714,6 +1862,27 @@ class Glassboard {
             this.ctx.lineTo(line.points[i].x, line.points[i].y);
         }
         this.ctx.stroke();
+    }
+
+    drawCenterDot() {
+        // Draw a 2x2px bright yellow dot at the note's stored origin
+        // Size is compensated for zoom so it always appears 2x2px visually
+        const dotSize = 2 / this.zoomLevel;
+
+        // Get origin from current note (already in content-space)
+        const note = this.notes[this.currentNoteIndex];
+        const rect = this.canvas.getBoundingClientRect();
+        // Fallback for notes without origin (legacy) or if note doesn't exist
+        const originX = note?.originX ?? (rect.width / 2 / this.zoomLevel);
+        const originY = note?.originY ?? (rect.height / 2 / this.zoomLevel);
+
+        this.ctx.fillStyle = '#facc15'; // Bright yellow
+        this.ctx.fillRect(
+            originX - dotSize / 2,
+            originY - dotSize / 2,
+            dotSize,
+            dotSize
+        );
     }
 
     drawSelectionHighlight() {
@@ -1808,6 +1977,210 @@ class Glassboard {
 
         // Also check on initial load
         setTimeout(() => this.checkSystemClipboard(), 500);
+    }
+
+    // File drag-and-drop support
+    setupFileDrop() {
+        // Prevent default drag behaviors on document
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(event => {
+            document.addEventListener(event, (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+            });
+        });
+
+        // Visual feedback on dragover
+        this.app.addEventListener('dragenter', () => {
+            this.app.classList.add('drag-over');
+        });
+
+        this.app.addEventListener('dragleave', (e) => {
+            if (!this.app.contains(e.relatedTarget)) {
+                this.app.classList.remove('drag-over');
+            }
+        });
+
+        // Handle drop
+        this.app.addEventListener('drop', (e) => {
+            this.app.classList.remove('drag-over');
+            this.handleFileDrop(e);
+        });
+    }
+
+    handleFileDrop(e) {
+        const files = e.dataTransfer.files;
+        if (!files.length) return;
+
+        const dropX = e.clientX - this.app.getBoundingClientRect().left;
+        const dropY = e.clientY - this.app.getBoundingClientRect().top;
+
+        // Process each file
+        Array.from(files).forEach((file, index) => {
+            const x = dropX + (index * 20); // Offset multiple files
+            const y = dropY + (index * 20);
+
+            if (this.isImageFile(file)) {
+                this.handleDroppedImage(file, x, y);
+            } else {
+                this.handleDroppedFile(file, x, y);
+            }
+        });
+
+        this.saveState();
+    }
+
+    isImageFile(file) {
+        const imageTypes = ['image/png', 'image/jpeg', 'image/gif', 'image/webp', 'image/svg+xml', 'image/bmp'];
+        return imageTypes.includes(file.type) || /\.(png|jpe?g|gif|webp|svg|bmp)$/i.test(file.name);
+    }
+
+    handleDroppedImage(file, x, y) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const img = new Image();
+            img.onload = () => {
+                this.pasteImage(e.target.result, x, y, img.width, img.height);
+            };
+            img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    }
+
+    handleDroppedFile(file, x, y) {
+        const id = Date.now().toString();
+
+        // Create attachment element
+        const attachment = document.createElement('div');
+        attachment.className = 'file-attachment';
+        attachment.dataset.id = id;
+        attachment.style.left = (x / this.zoomLevel) + 'px';
+        attachment.style.top = (y / this.zoomLevel) + 'px';
+
+        // File icon based on extension
+        const icon = this.getFileIcon(file.name);
+
+        attachment.innerHTML = `
+            <div class="attachment-icon">${icon}</div>
+            <div class="attachment-name" title="${file.name}">${file.name}</div>
+            <button class="attachment-delete-btn">✕</button>
+        `;
+
+        this.textContainer.appendChild(attachment);
+
+        // Store attachment data
+        this.attachments.push({
+            id,
+            x: x / this.zoomLevel,
+            y: y / this.zoomLevel,
+            filePath: file.path, // Electron provides full path
+            fileName: file.name,
+            fileType: file.type || this.getExtension(file.name)
+        });
+
+        // Setup interactions
+        this.setupAttachmentDrag(attachment, id);
+        this.setupAttachmentClick(attachment, id);
+
+        // Delete button
+        attachment.querySelector('.attachment-delete-btn').addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.deleteAttachment(id);
+        });
+    }
+
+    getFileIcon(fileName) {
+        const ext = this.getExtension(fileName).toLowerCase();
+        const icons = {
+            pdf: '📄', doc: '📝', docx: '📝', txt: '📃',
+            xls: '📊', xlsx: '📊', csv: '📊',
+            ppt: '📽️', pptx: '📽️',
+            zip: '🗜️', rar: '🗜️', '7z': '🗜️',
+            mp3: '🎵', wav: '🎵', m4a: '🎵',
+            mp4: '🎬', mov: '🎬', avi: '🎬',
+            js: '📜', py: '📜', html: '📜', css: '📜',
+            default: '📎'
+        };
+        return icons[ext] || icons.default;
+    }
+
+    getExtension(fileName) {
+        return fileName.split('.').pop() || '';
+    }
+
+    setupAttachmentDrag(element, id) {
+        let isDragging = false;
+        let startX, startY, initialX, initialY;
+
+        element.addEventListener('mousedown', (e) => {
+            if (e.target.classList.contains('attachment-delete-btn')) return;
+            isDragging = true;
+            startX = e.clientX;
+            startY = e.clientY;
+            initialX = parseInt(element.style.left);
+            initialY = parseInt(element.style.top);
+            element.classList.add('dragging');
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+            const dx = (e.clientX - startX) / this.zoomLevel;
+            const dy = (e.clientY - startY) / this.zoomLevel;
+            element.style.left = (initialX + dx) + 'px';
+            element.style.top = (initialY + dy) + 'px';
+        });
+
+        document.addEventListener('mouseup', () => {
+            if (isDragging) {
+                isDragging = false;
+                element.classList.remove('dragging');
+                // Update stored position
+                const att = this.attachments.find(a => a.id === id);
+                if (att) {
+                    att.x = parseInt(element.style.left);
+                    att.y = parseInt(element.style.top);
+                }
+            }
+        });
+    }
+
+    setupAttachmentClick(element, id) {
+        element.addEventListener('dblclick', () => {
+            const att = this.attachments.find(a => a.id === id);
+            if (att?.filePath) {
+                window.glassboard.openFile(att.filePath);
+            }
+        });
+    }
+
+    deleteAttachment(id) {
+        this.attachments = this.attachments.filter(a => a.id !== id);
+        const element = this.textContainer.querySelector(`.file-attachment[data-id="${id}"]`);
+        if (element) element.remove();
+        this.saveState();
+    }
+
+    restoreAttachment(att) {
+        const attachment = document.createElement('div');
+        attachment.className = 'file-attachment';
+        attachment.dataset.id = att.id;
+        attachment.style.left = att.x + 'px';
+        attachment.style.top = att.y + 'px';
+
+        const icon = this.getFileIcon(att.fileName);
+        attachment.innerHTML = `
+            <div class="attachment-icon">${icon}</div>
+            <div class="attachment-name" title="${att.fileName}">${att.fileName}</div>
+            <button class="attachment-delete-btn">✕</button>
+        `;
+
+        this.textContainer.appendChild(attachment);
+        this.setupAttachmentDrag(attachment, att.id);
+        this.setupAttachmentClick(attachment, att.id);
+
+        attachment.querySelector('.attachment-delete-btn').addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.deleteAttachment(att.id);
+        });
     }
 
     checkSystemClipboard() {
@@ -2066,6 +2439,9 @@ class Glassboard {
         item.style.left = (x / this.zoomLevel) + 'px';
         item.style.top = (y / this.zoomLevel) + 'px';
         item.style.color = this.currentColor;
+        // Apply counter-scale so text doesn't zoom
+        item.style.transform = `scale(${1 / this.zoomLevel})`;
+        item.style.transformOrigin = 'top left';
 
         // Add drag handle
         const dragHandle = document.createElement('div');
@@ -2086,12 +2462,13 @@ class Glassboard {
             <button class="format-btn delete-btn" title="Delete">✕</button>
         `;
 
-        // Create textarea with pasted text
-        const textarea = document.createElement('textarea');
-        textarea.className = 'text-input';
-        textarea.value = text;
-        textarea.style.color = this.currentColor;
-        textarea.rows = 1;
+        // Create contentEditable div with pasted text
+        const editor = document.createElement('div');
+        editor.className = 'text-input';
+        editor.contentEditable = 'true';
+        // Escape HTML to prevent XSS when pasting plain text
+        editor.textContent = text;
+        editor.style.color = this.currentColor;
 
         // Add resize handle
         const resizeHandle = document.createElement('div');
@@ -2099,7 +2476,7 @@ class Glassboard {
 
         item.appendChild(dragHandle);
         item.appendChild(formatBar);
-        item.appendChild(textarea);
+        item.appendChild(editor);
         item.appendChild(resizeHandle);
         this.textContainer.appendChild(item);
 
@@ -2107,16 +2484,12 @@ class Glassboard {
             id,
             x: x / this.zoomLevel,
             y: y / this.zoomLevel,
-            text,
+            content: editor.innerHTML,
             color: this.currentColor
         });
 
         // Setup event handlers
-        this.setupPastedTextItem(item, id, textarea, formatBar);
-
-        // Auto-grow
-        textarea.style.height = 'auto';
-        textarea.style.height = textarea.scrollHeight + 'px';
+        this.setupPastedTextItem(item, id, editor, formatBar);
         this.saveState();
     }
 
@@ -2180,6 +2553,7 @@ class Glassboard {
                 if (this.app.classList.contains('focused')) {
                     window.glassboard.setBackgroundMode(mode);
                 }
+                this.applyBackgroundModes();
                 this.applyBackgroundOpacity();
                 this.autoSave();
             });
@@ -2194,6 +2568,7 @@ class Glassboard {
                 if (!this.app.classList.contains('focused')) {
                     window.glassboard.setBackgroundMode(mode);
                 }
+                this.applyBackgroundModes();
                 this.applyBackgroundOpacity();
                 this.autoSave();
             });
@@ -2422,6 +2797,9 @@ class Glassboard {
         element.style.top = item.y + 'px';
         element.style.color = item.color;
         if (item.width) element.style.width = item.width + 'px';
+        // Apply counter-scale so text doesn't zoom
+        element.style.transform = `scale(${1 / this.zoomLevel})`;
+        element.style.transformOrigin = 'top left';
 
         const dragHandle = document.createElement('div');
         dragHandle.className = 'text-drag-handle';
@@ -2436,26 +2814,27 @@ class Glassboard {
             <button class="format-btn delete-btn" title="Delete">✕</button>
         `;
 
-        const textarea = document.createElement('textarea');
-        textarea.className = 'text-input';
-        textarea.value = item.text;
-        textarea.style.color = item.color;
-        textarea.rows = 1;
+        const editor = document.createElement('div');
+        editor.className = 'text-input';
+        editor.contentEditable = 'true';
+        // Support both old 'text' and new 'content' formats for backwards compatibility
+        editor.innerHTML = item.content || item.text || '';
+        editor.style.color = item.color;
 
         const resizeHandle = document.createElement('div');
         resizeHandle.className = 'text-resize-handle';
 
         element.appendChild(dragHandle);
         element.appendChild(formatBar);
-        element.appendChild(textarea);
+        element.appendChild(editor);
         element.appendChild(resizeHandle);
         this.textContainer.appendChild(element);
 
-        this.textItems.push({ ...item });
-        this.setupPastedTextItem(element, item.id, textarea, formatBar);
-
-        textarea.style.height = 'auto';
-        textarea.style.height = textarea.scrollHeight + 'px';
+        // Normalize to new format
+        const normalizedItem = { ...item, content: item.content || item.text || '' };
+        delete normalizedItem.text;
+        this.textItems.push(normalizedItem);
+        this.setupPastedTextItem(element, item.id, editor, formatBar);
     }
 
     restoreImage(img) {
@@ -2576,11 +2955,11 @@ class Glassboard {
             this.textItems.forEach(item => {
                 const element = this.textContainer.querySelector(`[data-id="${item.id}"]`);
                 if (element) {
-                    const textarea = element.querySelector('.text-input');
-                    if (textarea && textarea.value) {
+                    const editor = element.querySelector('.text-input');
+                    if (editor && editor.textContent) {
                         exportCtx.font = '16px system-ui, -apple-system, sans-serif';
                         exportCtx.fillStyle = item.color;
-                        const lines = textarea.value.split('\n');
+                        const lines = editor.textContent.split('\n');
                         lines.forEach((line, i) => {
                             exportCtx.fillText(line, item.x, item.y + 20 + (i * 20));
                         });
@@ -2668,7 +3047,16 @@ class Glassboard {
                         if (inactiveOpacityValue) inactiveOpacityValue.textContent = `${this.settings.inactiveOpacity || 50}%`;
                     }
 
+                    this.applyBackgroundModes();
                     this.applyBackgroundOpacity();
+
+                    // Apply native vibrancy based on restored settings
+                    const currentBgMode = this.app.classList.contains('focused')
+                        ? this.settings.activeBgMode
+                        : this.settings.inactiveBgMode;
+                    if (currentBgMode === 'blur') {
+                        window.glassboard.setBackgroundMode('blur');
+                    }
                 }
 
                 // Check if we should open with clean slate

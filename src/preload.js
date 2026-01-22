@@ -4,6 +4,12 @@ contextBridge.exposeInMainWorld('glassboard', {
     onFocusChange: (callback) => {
         ipcRenderer.on('window-focus', (event, focused) => callback(focused));
     },
+    onBackgroundModeChange: (callback) => {
+        ipcRenderer.on('background-mode-changed', (event, mode) => callback(mode));
+    },
+    onWindowToggledOpen: (callback) => {
+        ipcRenderer.on('window-toggled-open', () => callback());
+    },
     closeWindow: () => {
         ipcRenderer.send('close-window');
     },
@@ -82,5 +88,9 @@ contextBridge.exposeInMainWorld('glassboard', {
     // Export note as PNG
     exportPNG: (imageDataUrl) => {
         return ipcRenderer.invoke('export-png', imageDataUrl);
+    },
+    // Open file in default application
+    openFile: (filePath) => {
+        ipcRenderer.send('open-file', filePath);
     }
 });

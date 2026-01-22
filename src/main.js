@@ -9,7 +9,7 @@ const dataFilePath = path.join(userDataPath, 'floatnote-data.json');
 // Ensure only one instance of the app runs
 const gotTheLock = app.requestSingleInstanceLock();
 if (!gotTheLock) {
-    app.quit();
+    app.exit(0);
 }
 
 // Single window reference
@@ -25,6 +25,9 @@ app.on('second-instance', () => {
     }
 });
 
+// Track if we're currently creating a window to prevent race conditions
+let isCreatingWindow = false;
+
 function createWindow(options = {}) {
     // If window already exists, just show it
     if (mainWindow && !mainWindow.isDestroyed()) {
@@ -32,6 +35,19 @@ function createWindow(options = {}) {
         mainWindow.focus();
         return mainWindow;
     }
+
+    // Prevent race condition - if already creating, don't create another
+    if (isCreatingWindow) {
+        return null;
+    }
+    isCreatingWindow = true;
+
+    // Close any stray windows (safety check)
+    BrowserWindow.getAllWindows().forEach(win => {
+        if (win !== mainWindow) {
+            win.destroy();
+        }
+    });
 
     // Get the display where the cursor is (or primary display)
     const cursorPoint = screen.getCursorScreenPoint();
@@ -55,11 +71,16 @@ function createWindow(options = {}) {
         transparent: true,
         backgroundColor: '#00000000',
         frame: false,
+        titleBarStyle: 'customButtonsOnHover',
+        trafficLightPosition: { x: -100, y: -100 },
         alwaysOnTop: true,
         hasShadow: false,
         resizable: true,
         movable: true,
         skipTaskbar: false,
+        // macOS vibrancy settings for blur effect
+        vibrancy: null, // Start with no vibrancy, set dynamically
+        visualEffectState: 'active',
         webPreferences: {
             nodeIntegration: false,
             contextIsolation: true,
@@ -101,7 +122,13 @@ function createWindow(options = {}) {
         });
     });
 
+    // Ensure cleanup when window is destroyed
+    win.on('closed', () => {
+        mainWindow = null;
+    });
+
     mainWindow = win;
+    isCreatingWindow = false;
     return win;
 }
 
@@ -130,16 +157,8 @@ app.whenReady().then(() => {
         toggleFloatnote();
     });
 
-    // Ctrl+` for quick toggle (easy to reach)
-    globalShortcut.register('Control+`', () => {
-        toggleFloatnote();
-    });
-
-    app.on('activate', () => {
-        // Show existing window or create new one
-        createWindow();
-    });
 });
+
 
 function createTray() {
     // Create a 16x16 template icon embedded as base64
@@ -250,6 +269,8 @@ function toggleFloatnote() {
     } else {
         mainWindow.show();
         mainWindow.focus();
+        // Notify renderer that window was shown via toggle
+        mainWindow.webContents.send('window-toggled-open');
     }
 }
 
@@ -278,24 +299,22 @@ ipcMain.on('set-pinned', (event, pinned) => {
 });
 
 // Handle background mode change from renderer
+// Uses macOS native vibrancy for blur effect
 ipcMain.on('set-background-mode', (event, mode) => {
     const win = BrowserWindow.fromWebContents(event.sender);
     if (!win) return;
 
-    // Reset vibrancy and background
+    // Set vibrancy based on mode
     if (mode === 'blur') {
-        // Use macOS vibrancy for blur effect
-        // Try different vibrancy types for better effect
+        // Use macOS native vibrancy for blur effect
         win.setVibrancy('under-window');
-        win.setBackgroundColor('#00000001'); // Nearly transparent but allows vibrancy
-    } else if (mode === 'dark') {
-        win.setVibrancy('dark');
-        win.setBackgroundColor('#00000001');
     } else {
-        // Transparent
+        // Remove vibrancy for transparent or dark modes
         win.setVibrancy(null);
-        win.setBackgroundColor('#00000000');
     }
+
+    // Notify renderer of the mode change
+    win.webContents.send('background-mode-changed', mode);
 });
 
 // Handle window size change from renderer
@@ -427,6 +446,13 @@ ipcMain.handle('open-floatnote-folder', async () => {
     } catch (error) {
         console.error('Failed to open folder:', error);
         return { success: false, error: error.message };
+    }
+});
+
+// Open file in default application
+ipcMain.on('open-file', (event, filePath) => {
+    if (filePath && fs.existsSync(filePath)) {
+        shell.openPath(filePath);
     }
 });
 
