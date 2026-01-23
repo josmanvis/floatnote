@@ -1,6 +1,6 @@
 {
   "name": "floatnote",
-  "version": "1.0.8",
+  "version": "1.0.9",
   "description": "Transparent always-on-top drawing and note-taking overlay for macOS",
   "bin": {
     "floatnote": "bin/floatnote.js"
