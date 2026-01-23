@@ -184,14 +184,15 @@ app.whenReady().then(() => {
 });
 
 function createTray() {
-  // Create a 16x16 template icon embedded as base64
-  // This is a simple "G" letter icon that works as a macOS template image
-  const iconBase64 =
-    "iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAABGdBTUEAALGPC/xhBQAAACBjSFJNAAB6JgAAgIQAAPoAAACA6AAAdTAAAOpgAAA6mAAAF3CculE8AAAAhGVYSWZNTQAqAAAACAAFARIAAwAAAAEAAQAAARoABQAAAAEAAABKARsABQAAAAEAAABSASgAAwAAAAEAAgAAh2kABAAAAAEAAABaAAAAAAAAAEgAAAABAAAASAAAAAEAA6ABAAMAAAABAAEAAKACAAQAAAABAAAAEKADAAQAAAABAAAAEAAAAABBPTzcAAAACXBIWXMAAAsTAAALEwEAmpwYAAACamlUWHRYTUw6Y29tLmFkb2JlLnhtcAAAAAAAPHg6eG1wbWV0YSB4bWxuczp4PSJhZG9iZTpuczptZXRhLyIgeDp4bXB0az0iWE1QIENvcmUgNi4wLjAiPgogICA8cmRmOlJERiB4bWxuczpyZGY9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkvMDIvMjItcmRmLXN5bnRheC1ucyMiPgogICAgICA8cmRmOkRlc2NyaXB0aW9uIHJkZjphYm91dD0iIgogICAgICAgICAgICB4bWxuczp0aWZmPSJodHRwOi8vbnMuYWRvYmUuY29tL3RpZmYvMS4wLyIKICAgICAgICAgICAgeG1sbnM6ZXhpZj0iaHR0cDovL25zLmFkb2JlLmNvbS9leGlmLzEuMC8iPgogICAgICAgICA8dGlmZjpPcmllbnRhdGlvbj4xPC90aWZmOk9yaWVudGF0aW9uPgogICAgICAgICA8ZXhpZjpQaXhlbFhEaW1lbnNpb24+MTY8L2V4aWY6UGl4ZWxYRGltZW5zaW9uPgogICAgICAgICA8ZXhpZjpQaXhlbFlEaW1lbnNpb24+MTY8L2V4aWY6UGl4ZWxZRGltZW5zaW9uPgogICAgICA8L3JkZjpEZXNjcmlwdGlvbj4KICAgPC9yZGY6UkRGPgo8L3g6eG1wbWV0YT4KXwjvyAAAALNJREFUOBFjZGBg+M+ABjCYGP4z/GdgUGBkYDjPwMDwH0XOf4b/TP8ZGM4zMjD8h8oBOU9AgMxMBrDAf4b/jAz/kZ3AwPD/PyMDw38kJwAF/zOC+CCJf0BBRkYGhv8MDIwMDAwgJ/xnAgr8Z2D4z8Dw//9/BkZGRob/ICdAxRj+MzAygBQCJRgYGP6D+EB5kPP/MzD8R3ECUAwiBhYEOYGRkeE/0GAGBgYgG+oloCAA7jIp5c7VUCUAAAAASUVORK5CYII=";
-
-  const icon = nativeImage.createFromDataURL(
-    `data:image/png;base64,${iconBase64}`,
-  );
+  // Load template icon from file - Electron auto-detects @2x for Retina
+  // Template images: black pixels + alpha only, macOS auto-inverts for dark mode
+  const iconPath = path.join(__dirname, 'iconTemplate.png');
+  let icon;
+  if (typeof nativeImage.createFromPath === 'function') {
+    icon = nativeImage.createFromPath(iconPath);
+  } else {
+    icon = nativeImage.createEmpty ? nativeImage.createEmpty() : nativeImage.createFromDataURL('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVQI12NgAAIABQABNjN9GQAAAABJRUEFTkSuQmCC');
+  }
   icon.setTemplateImage(true);
 
   tray = new Tray(icon);

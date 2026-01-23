@@ -41,6 +41,9 @@ const Menu = {
 const nativeImage = {
   createFromDataURL: jest.fn(() => ({
     setTemplateImage: jest.fn()
+  })),
+  createFromPath: jest.fn(() => ({
+    setTemplateImage: jest.fn()
   }))
 };
 
