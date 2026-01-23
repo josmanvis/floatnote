@@ -338,6 +338,45 @@ div#window-top-edge-drag-handle:hover {
     flex-shrink: 0;
 }
 
+/* Shape dropdown */
+.shape-dropdown {
+    min-width: 130px;
+}
+
+.shape-option {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 8px 12px;
+    background: transparent;
+    border: none;
+    border-radius: 6px;
+    color: white;
+    font-size: 12px;
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+
+.shape-option:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.shape-option.active {
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.shape-option.active::after {
+    content: "\2713";
+    margin-left: auto;
+    color: #facc15;
+}
+
+.shape-option svg {
+    flex-shrink: 0;
+    stroke: white;
+}
+
 /* Pin toggle */
 .pin-toggle {
     display: flex;
