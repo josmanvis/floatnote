@@ -12,7 +12,7 @@ See: .planning/PROJECT.md (updated 2026-01-22)
 Phase: 3 of 4 (CI/CD Pipeline)
 Plan: 2 of 2 in current phase
 Status: Phase complete -- ALL PHASES COMPLETE
-Last activity: 2026-01-23 -- Completed quick task 003: add shape drawing with toolbar dropdown
+Last activity: 2026-01-23 -- Completed quick task 004: publish a new build (v1.0.6)
 
 Progress: [██████████] 100%
 
@@ -79,6 +79,7 @@ None yet.
 | 001 | Fix opacity settings bg color from white to black | 2026-01-22 | d8a30dd | [001-the-opacity-settings-are-using-a-bg-colo](./quick/001-the-opacity-settings-are-using-a-bg-colo/) |
 | 002 | Publish a new build (v1.0.3) | 2026-01-23 | bbe24d9 | [002-publish-a-new-build](./quick/002-publish-a-new-build/) |
 | 003 | Add shape drawing with toolbar dropdown | 2026-01-23 | 2fb4a5d | [003-add-shape-drawing-with-toolbar-dropdown](./quick/003-add-shape-drawing-with-toolbar-dropdown/) |
+| 004 | Publish a new build (v1.0.6) | 2026-01-23 | 6367dba | [004-publish-a-new-build](./quick/004-publish-a-new-build/) |
 
 ## Session Continuity
 
