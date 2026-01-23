@@ -121,26 +121,28 @@ function createWindow(options = {}) {
     win.webContents.send("window-focus", false);
   });
 
-  // Handle close confirmation
-  win.on("close", (e) => {
-    e.preventDefault();
+  // Handle close confirmation (skip in test mode for clean teardown)
+  if (process.env.NODE_ENV !== 'test') {
+    win.on("close", (e) => {
+      e.preventDefault();
 
-    dialog
-      .showMessageBox(win, {
-        type: "warning",
-        buttons: ["Close", "Cancel"],
-        defaultId: 1,
-        title: "Close Floatnote?",
-        message: "Are you sure you want to close Floatnote?",
-        detail: "Any unsaved content will be lost.",
-      })
-      .then((result) => {
-        if (result.response === 0) {
-          mainWindow = null;
-          win.destroy();
-        }
-      });
-  });
+      dialog
+        .showMessageBox(win, {
+          type: "warning",
+          buttons: ["Close", "Cancel"],
+          defaultId: 1,
+          title: "Close Floatnote?",
+          message: "Are you sure you want to close Floatnote?",
+          detail: "Any unsaved content will be lost.",
+        })
+        .then((result) => {
+          if (result.response === 0) {
+            mainWindow = null;
+            win.destroy();
+          }
+        });
+    });
+  }
 
   // Ensure cleanup when window is destroyed
   win.on("closed", () => {

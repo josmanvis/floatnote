@@ -39,7 +39,6 @@
     "@playwright/test": "^1.57.0",
     "electron": "^33.0.0",
     "electron-builder": "^25.0.0",
-    "electron-playwright-helpers": "^2.1.0",
     "jest": "^29.7.0",
     "jest-environment-jsdom": "^29.7.0"
   },
