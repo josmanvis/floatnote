@@ -3119,5 +3119,7 @@ class Glassboard {
 
 // Initialize when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
-    new Glassboard();
+    const glassboard = new Glassboard();
+    // Expose instance for E2E testing (harmless in production - nothing reads it)
+    window.glassboardInstance = glassboard;
 });

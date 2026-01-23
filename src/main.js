@@ -13,14 +13,21 @@ const {
 const path = require("path");
 const fs = require("fs");
 
+// Allow E2E tests to override userData path for isolation
+if (process.env.ELECTRON_USER_DATA_DIR) {
+  app.setPath('userData', process.env.ELECTRON_USER_DATA_DIR);
+}
+
 // Data storage path
 const userDataPath = app.getPath("userData");
 const dataFilePath = path.join(userDataPath, "floatnote-data.json");
 
 // Ensure only one instance of the app runs
-const gotTheLock = app.requestSingleInstanceLock();
-if (!gotTheLock) {
-  app.exit(0);
+if (process.env.NODE_ENV !== 'test') {
+  const gotTheLock = app.requestSingleInstanceLock();
+  if (!gotTheLock) {
+    app.exit(0);
+  }
 }
 
 // Single window reference
