@@ -23,7 +23,7 @@
     "type": "git",
     "url": "git+https://github.com/josmanvis/floatnote.git"
   },
-  "homepage": "https://github.com/josmanvis/floatnote",
+  "homepage": "https://josmanvis.github.io/floatnote/",
   "keywords": [
     "electron",
     "drawing",
