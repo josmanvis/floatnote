@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-01-22)
 
 **Core value:** A persistent, transparent scratch space that's always one keyboard shortcut away
-**Current focus:** Phase 3 - CI/CD Pipeline
+**Current focus:** All phases complete
 
 ## Current Position
 
 Phase: 3 of 4 (CI/CD Pipeline)
-Plan: 1 of 2 in current phase
-Status: In progress
-Last activity: 2026-01-23 -- Completed 03-01-PLAN.md (GitHub Actions test workflow)
+Plan: 2 of 2 in current phase
+Status: Phase complete -- ALL PHASES COMPLETE
+Last activity: 2026-01-23 -- Completed 03-02-PLAN.md (build and release pipeline)
 
-Progress: [████████░░] 80%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 8
-- Average duration: ~2.6 min
-- Total execution time: ~21 min
+- Total plans completed: 9
+- Average duration: ~2.4 min
+- Total execution time: ~22 min
 
 **By Phase:**
 
@@ -29,12 +29,12 @@ Progress: [████████░░] 80%
 |-------|-------|-------|----------|
 | 1 | 2 | ~4 min | ~2 min |
 | 2 | 3 | ~14 min | ~4.7 min |
-| 3 | 1 | ~0.5 min | ~0.5 min |
+| 3 | 2 | ~1.5 min | ~0.75 min |
 | 4 | 2 | ~2.5 min | ~1.25 min |
 
 **Recent Trend:**
-- Last 5 plans: 02-02 ✓, 02-03 ✓, 04-01 ✓, 04-02 ✓, 03-01 ✓
-- Trend: Stable
+- Last 5 plans: 02-03 ✓, 04-01 ✓, 04-02 ✓, 03-01 ✓, 03-02 ✓
+- Trend: Stable -- all phases complete
 
 *Updated after each plan completion*
 
@@ -51,6 +51,7 @@ Recent decisions affecting current work:
 - [Roadmap]: npm package ships only bin/ (~5KB CLI), app downloaded from GitHub Releases
 - [04-01]: Explicit electron entry path replaces main field (main field caused src/ to leak into tarball)
 - [04-02]: Trigger on release published events (not drafts), ubuntu-latest for bin-only package
+- [03-02]: merge-multiple: true flattens artifacts; job-level permissions for least-privilege
 - [02-01]: Skip close dialog in test mode for reliable E2E teardown
 - [02-01]: Use page.evaluate() for toolbar actions (hover-dependent UI)
 - [02-01]: Removed electron-playwright-helpers (unused after dialog fix)
@@ -80,5 +81,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-01-23
-Stopped at: Completed 03-01-PLAN.md -- test CI workflow
+Stopped at: Completed 03-02-PLAN.md -- Phase 3 complete, ALL PHASES COMPLETE
 Resume file: None
