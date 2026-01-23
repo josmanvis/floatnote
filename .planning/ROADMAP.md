@@ -62,11 +62,11 @@ Plans:
   3. The tag-triggered build creates a GitHub Release with all artifacts attached and auto-generated release notes from commits
   4. Builds succeed in CI without code signing (CSC_IDENTITY_AUTO_DISCOVERY=false)
   5. Version management is atomic: `npm version` creates the commit and tag, tag push triggers the release
-**Plans**: TBD
+**Plans:** 2 plans
 
 Plans:
-- [ ] 03-01: Test workflow (push/PR triggers, ubuntu runner, npm test)
-- [ ] 03-02: Release workflow (tag trigger, macos runner, electron-builder, GitHub Release creation)
+- [ ] 03-01-PLAN.md -- Test workflow (push/PR triggers, ubuntu runner, npm test)
+- [ ] 03-02-PLAN.md -- Release workflow (tag trigger, macos runner, electron-builder, GitHub Release creation)
 
 ### Phase 4: npm Publishing
 **Goal**: `npx floatnote` installs a minimal CLI package from npm that downloads and launches the app from GitHub Releases
