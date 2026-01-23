@@ -77,11 +77,11 @@ Plans:
   2. Running `npm publish` locally first runs tests via prepublishOnly and fails if tests fail
   3. A successful GitHub Release triggers npm publish automatically in the release workflow
   4. `npx floatnote` on a clean machine installs the CLI, downloads the app from the latest GitHub Release, and launches it
-**Plans**: TBD
+**Plans:** 2 plans
 
 Plans:
-- [ ] 04-01: Package.json configuration (files field, prepublishOnly, dry-run verification)
-- [ ] 04-02: Release workflow npm publish step and end-to-end npx verification
+- [ ] 04-01-PLAN.md -- Package.json configuration (files field, prepublishOnly, dry-run verification)
+- [ ] 04-02-PLAN.md -- Release workflow npm publish step and npm token configuration
 
 ## Progress
 
