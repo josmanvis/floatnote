@@ -1,5 +1,5 @@
 .hero {
-  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+  background: linear-gradient(135deg, #1a1a2e 0%, #2e1629 50%, #3d1435 100%);
   padding: 6rem 2rem;
   text-align: center;
 }
@@ -41,7 +41,7 @@
 }
 
 .heroButtonPrimary {
-  background: #6c63ff;
+  background: #ff63a5;
   color: #ffffff;
   border: none;
   padding: 0.85rem 2.5rem;
@@ -51,7 +51,7 @@
 }
 
 .heroButtonPrimary:hover {
-  background: #5a50e6;
+  background: #e6508c;
   color: #ffffff;
   transform: translateY(-2px);
 }
@@ -67,7 +67,7 @@
 }
 
 .heroButtonSecondary:hover {
-  border-color: #6c63ff;
+  border-color: #ff63a5;
   color: #ffffff;
   transform: translateY(-2px);
 }
@@ -126,7 +126,7 @@
 
 .featureCard:hover {
   transform: translateY(-4px);
-  box-shadow: 0 8px 24px rgba(108, 99, 255, 0.15);
+  box-shadow: 0 8px 24px rgba(255, 99, 165, 0.15);
   border-color: #3a3a5e;
 }
 

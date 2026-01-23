@@ -63,8 +63,8 @@
 
 .downloadCard:hover {
   transform: translateY(-3px);
-  box-shadow: 0 8px 24px rgba(108, 99, 255, 0.2);
-  border-color: #6c63ff;
+  box-shadow: 0 8px 24px rgba(255, 99, 165, 0.2);
+  border-color: #ff63a5;
   text-decoration: none;
   color: inherit;
 }
@@ -90,8 +90,8 @@
 
 .downloadBadge {
   display: inline-block;
-  background: #6c63ff22;
-  color: #a8a3ff;
+  background: #ff63a522;
+  color: #ffadd4;
   padding: 0.2rem 0.6rem;
   border-radius: 4px;
   font-size: 0.75rem;
@@ -106,7 +106,7 @@
 }
 
 .releaseNote a {
-  color: #6c63ff;
+  color: #ff63a5;
 }
 
 .codeBlock {
@@ -148,6 +148,6 @@
 
 .requirements li::before {
   content: '-- ';
-  color: #6c63ff;
+  color: #ff63a5;
   font-weight: 600;
 }
