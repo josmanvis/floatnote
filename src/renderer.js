@@ -321,6 +321,12 @@ class Glassboard {
             this.isShapeMode = false;
             this.currentShape = null;
 
+            // Deselect any selected objects when switching modes
+            if (this.selectedObjectId) {
+                this.selectedObjectId = null;
+            }
+            this.clearMultiSelection();
+
             // Update button states
             selectModeBtn.classList.toggle('active', mode === 'select');
             drawModeBtn.classList.toggle('active', mode === 'draw');
@@ -413,6 +419,10 @@ class Glassboard {
                     const size = Math.min(16, 4 + parseInt(btn.dataset.width));
                     currentStroke.style.width = size + 'px';
                     currentStroke.style.height = size + 'px';
+                }
+                // Update selected object's stroke width
+                if (this.selectedObjectId) {
+                    this.changeObjectWidth(this.selectedObjectId, parseInt(btn.dataset.width));
                 }
             });
         });
@@ -1161,6 +1171,18 @@ class Glassboard {
             }
         });
         this.redraw();
+        this.saveState();
+    }
+
+    // Change stroke width of all strokes in an object
+    changeObjectWidth(objectId, width) {
+        this.lines.forEach(line => {
+            if (line.objectId === objectId) {
+                line.width = width;
+            }
+        });
+        this.redraw();
+        this.saveState();
     }
 
     // Change color of a text item
