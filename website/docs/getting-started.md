@@ -73,6 +73,6 @@ Floatnote supports multiple notes (canvases):
 
 ## Next Steps
 
-- Learn about all [Features](./features)
-- See the full [Keyboard Shortcuts](./shortcuts) reference
-- Configure [Settings](./settings) to your preference
+- Learn about all [Features](/docs/features)
+- See the full [Keyboard Shortcuts](/docs/shortcuts) reference
+- Configure [Settings](/docs/settings) to your preference
