@@ -29,11 +29,11 @@ Requirements for this milestone: test core flows, automate builds, publish to np
 
 ### npm Publishing
 
-- [ ] **NPM-01**: package.json `files` field limits published package to `bin/` only
-- [ ] **NPM-02**: `prepublishOnly` script runs tests before publish
-- [ ] **NPM-03**: Release workflow publishes to npm after successful GitHub Release
-- [ ] **NPM-04**: NPM_TOKEN secret configured for CI authentication
-- [ ] **NPM-05**: `npx floatnote` successfully installs CLI and launches app download
+- [x] **NPM-01**: package.json `files` field limits published package to `bin/` only
+- [x] **NPM-02**: `prepublishOnly` script runs tests before publish
+- [x] **NPM-03**: Release workflow publishes to npm after successful GitHub Release
+- [x] **NPM-04**: NPM_TOKEN secret configured for CI authentication
+- [x] **NPM-05**: `npx floatnote` successfully installs CLI and launches app download
 
 ## v2 Requirements
 
@@ -89,11 +89,11 @@ Deferred to future milestone. Tracked but not in current roadmap.
 | CICD-04 | Phase 3 | Pending |
 | CICD-05 | Phase 3 | Pending |
 | CICD-06 | Phase 3 | Pending |
-| NPM-01 | Phase 4 | Pending |
-| NPM-02 | Phase 4 | Pending |
-| NPM-03 | Phase 4 | Pending |
-| NPM-04 | Phase 4 | Pending |
-| NPM-05 | Phase 4 | Pending |
+| NPM-01 | Phase 4 | Complete |
+| NPM-02 | Phase 4 | Complete |
+| NPM-03 | Phase 4 | Complete |
+| NPM-04 | Phase 4 | Complete |
+| NPM-05 | Phase 4 | Complete |
 
 **Coverage:**
 - v1 requirements: 19 total

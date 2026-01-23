@@ -15,7 +15,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 1: Integration Tests** - IPC and preload bridge contracts verified with real source code
 - [x] **Phase 2: E2E Tests** - Core user flows verified in real Electron app via Playwright
 - [ ] **Phase 3: CI/CD Pipeline** - Automated testing, building, and releasing on GitHub Actions
-- [ ] **Phase 4: npm Publishing** - CLI-only package published to npm, downloads app from Releases
+- [x] **Phase 4: npm Publishing** - CLI-only package published to npm, downloads app from Releases
 
 ## Phase Details
 
@@ -80,8 +80,8 @@ Plans:
 **Plans:** 2 plans
 
 Plans:
-- [ ] 04-01-PLAN.md -- Package.json configuration (files field, prepublishOnly, dry-run verification)
-- [ ] 04-02-PLAN.md -- Release workflow npm publish step and npm token configuration
+- [x] 04-01-PLAN.md -- Package.json configuration (files field, prepublishOnly, dry-run verification)
+- [x] 04-02-PLAN.md -- Release workflow npm publish step and npm token configuration
 
 ## Progress
 
@@ -93,4 +93,4 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4
 | 1. Integration Tests | 2/2 | Complete | 2026-01-22 |
 | 2. E2E Tests | 3/3 | Complete | 2026-01-23 |
 | 3. CI/CD Pipeline | 0/2 | Not started | - |
-| 4. npm Publishing | 0/2 | Not started | - |
+| 4. npm Publishing | 2/2 | Complete | 2026-01-23 |
