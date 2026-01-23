@@ -82,9 +82,10 @@ None yet.
 | 004 | Publish a new build (v1.0.6) | 2026-01-23 | 6367dba | [004-publish-a-new-build](./quick/004-publish-a-new-build/) |
 | 005 | Interactive shapes: select, resize, rotate | 2026-01-23 | 93d469d | [005-interactive-shapes-select-resize-rotate](./quick/005-interactive-shapes-select-resize-rotate/) |
 | 006 | Docusaurus website for GitHub Pages | 2026-01-23 | 1c76fc0 | [006-docusaurus-website-github-pages](./quick/006-docusaurus-website-github-pages/) |
+| 007 | Menubar icon dark mode support | 2026-01-23 | 4ea6ac5 | [007-menubar-icon-dark-mode-support](./quick/007-menubar-icon-dark-mode-support/) |
 
 ## Session Continuity
 
 Last session: 2026-01-23
-Stopped at: Completed quick task 006: Docusaurus website for GitHub Pages
+Stopped at: Completed quick task 007: menubar icon dark mode support
 Resume file: None
