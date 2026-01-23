@@ -13,7 +13,7 @@ Floatnote has a working app with no automated quality gates or distribution pipe
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Integration Tests** - IPC and preload bridge contracts verified with real source code
-- [ ] **Phase 2: E2E Tests** - Core user flows verified in real Electron app via Playwright
+- [x] **Phase 2: E2E Tests** - Core user flows verified in real Electron app via Playwright
 - [ ] **Phase 3: CI/CD Pipeline** - Automated testing, building, and releasing on GitHub Actions
 - [ ] **Phase 4: npm Publishing** - CLI-only package published to npm, downloads app from Releases
 
@@ -48,9 +48,9 @@ Plans:
 **Plans:** 3 plans
 
 Plans:
-- [ ] 02-01-PLAN.md -- Playwright + Electron setup and drawing flow test
-- [ ] 02-02-PLAN.md -- Text overlay, multi-note navigation, and clipboard tests
-- [ ] 02-03-PLAN.md -- Persistence tests (save/load across restart, settings survival)
+- [x] 02-01-PLAN.md -- Playwright + Electron setup and drawing flow test
+- [x] 02-02-PLAN.md -- Text overlay, multi-note navigation, and clipboard tests
+- [x] 02-03-PLAN.md -- Persistence tests (save/load across restart, settings survival)
 
 ### Phase 3: CI/CD Pipeline
 **Goal**: Every push runs tests automatically, and version tags produce signed GitHub Releases with macOS artifacts
@@ -91,6 +91,6 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Integration Tests | 2/2 | Complete | 2026-01-22 |
-| 2. E2E Tests | 0/3 | Not started | - |
+| 2. E2E Tests | 3/3 | Complete | 2026-01-23 |
 | 3. CI/CD Pipeline | 0/2 | Not started | - |
 | 4. npm Publishing | 0/2 | Not started | - |
