@@ -15,3 +15,6 @@ mac-arm64/
 *.zip
 *.blockmap
 *.tgz
+website/.docusaurus/
+website/build/
+website/node_modules/
