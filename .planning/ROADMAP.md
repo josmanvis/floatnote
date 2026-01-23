@@ -45,12 +45,12 @@ Plans:
   4. E2E test saves data, restarts the app, and verifies all notes and drawings survive the restart
   5. E2E test pastes an image from clipboard and verifies it appears on the canvas
   6. E2E test changes a setting (opacity, brush size), restarts the app, and verifies the setting persists
-**Plans**: TBD
+**Plans:** 3 plans
 
 Plans:
-- [ ] 02-01: Playwright + Electron setup and drawing flow test
-- [ ] 02-02: Text overlay, multi-note navigation, and clipboard tests
-- [ ] 02-03: Persistence tests (save/load across restart, settings survival)
+- [ ] 02-01-PLAN.md -- Playwright + Electron setup and drawing flow test
+- [ ] 02-02-PLAN.md -- Text overlay, multi-note navigation, and clipboard tests
+- [ ] 02-03-PLAN.md -- Persistence tests (save/load across restart, settings survival)
 
 ### Phase 3: CI/CD Pipeline
 **Goal**: Every push runs tests automatically, and version tags produce signed GitHub Releases with macOS artifacts
