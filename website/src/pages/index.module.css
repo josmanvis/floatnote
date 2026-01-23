@@ -1,0 +1,150 @@
+.hero {
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+  padding: 6rem 2rem;
+  text-align: center;
+}
+
+.heroInner {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.heroTitle {
+  font-size: 4rem;
+  font-weight: 800;
+  color: #ffffff;
+  margin-bottom: 1rem;
+  letter-spacing: -0.02em;
+}
+
+.heroSubtitle {
+  font-size: 1.5rem;
+  color: #b8c5d6;
+  margin-bottom: 1rem;
+  font-weight: 300;
+}
+
+.heroDescription {
+  font-size: 1.15rem;
+  color: #8899aa;
+  margin-bottom: 2.5rem;
+  max-width: 600px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.heroButtons {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.heroButtonPrimary {
+  background: #6c63ff;
+  color: #ffffff;
+  border: none;
+  padding: 0.85rem 2.5rem;
+  font-size: 1.1rem;
+  border-radius: 8px;
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.heroButtonPrimary:hover {
+  background: #5a50e6;
+  color: #ffffff;
+  transform: translateY(-2px);
+}
+
+.heroButtonSecondary {
+  background: transparent;
+  color: #b8c5d6;
+  border: 2px solid #3a4a5e;
+  padding: 0.85rem 2.5rem;
+  font-size: 1.1rem;
+  border-radius: 8px;
+  transition: border-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
+}
+
+.heroButtonSecondary:hover {
+  border-color: #6c63ff;
+  color: #ffffff;
+  transform: translateY(-2px);
+}
+
+.features {
+  padding: 5rem 2rem;
+  background: #121220;
+}
+
+.featuresInner {
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.featuresHeading {
+  text-align: center;
+  font-size: 2rem;
+  font-weight: 700;
+  color: #ffffff;
+  margin-bottom: 3rem;
+}
+
+.featuresGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.5rem;
+}
+
+@media (max-width: 996px) {
+  .featuresGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 600px) {
+  .featuresGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .heroTitle {
+    font-size: 2.5rem;
+  }
+
+  .heroSubtitle {
+    font-size: 1.2rem;
+  }
+}
+
+.featureCard {
+  background: #1e1e2e;
+  border-radius: 12px;
+  padding: 2rem;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  border: 1px solid #2a2a3e;
+}
+
+.featureCard:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(108, 99, 255, 0.15);
+  border-color: #3a3a5e;
+}
+
+.featureIcon {
+  font-size: 2.5rem;
+  margin-bottom: 1rem;
+}
+
+.featureTitle {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: #ffffff;
+  margin-bottom: 0.5rem;
+}
+
+.featureDescription {
+  font-size: 0.95rem;
+  color: #8899aa;
+  line-height: 1.6;
+  margin: 0;
+}

@@ -1,0 +1,153 @@
+.downloadPage {
+  padding: 4rem 2rem;
+  background: #121220;
+  min-height: calc(100vh - 60px);
+}
+
+.container {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.title {
+  font-size: 2.5rem;
+  font-weight: 800;
+  color: #ffffff;
+  margin-bottom: 0.5rem;
+}
+
+.subtitle {
+  font-size: 1.2rem;
+  color: #8899aa;
+  margin-bottom: 3rem;
+}
+
+.section {
+  margin-bottom: 3rem;
+}
+
+.sectionTitle {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #ffffff;
+  margin-bottom: 1.5rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #2a2a3e;
+}
+
+.downloadGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+@media (max-width: 600px) {
+  .downloadGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.downloadCard {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  background: #1e1e2e;
+  border: 1px solid #2a2a3e;
+  border-radius: 12px;
+  padding: 1.5rem;
+  text-decoration: none;
+  color: inherit;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.downloadCard:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 24px rgba(108, 99, 255, 0.2);
+  border-color: #6c63ff;
+  text-decoration: none;
+  color: inherit;
+}
+
+.downloadIcon {
+  font-size: 2.5rem;
+  color: #b8c5d6;
+  flex-shrink: 0;
+}
+
+.downloadInfo h3 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #ffffff;
+  margin: 0 0 0.25rem 0;
+}
+
+.downloadInfo p {
+  font-size: 0.9rem;
+  color: #8899aa;
+  margin: 0 0 0.5rem 0;
+}
+
+.downloadBadge {
+  display: inline-block;
+  background: #6c63ff22;
+  color: #a8a3ff;
+  padding: 0.2rem 0.6rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.releaseNote {
+  font-size: 0.95rem;
+  color: #8899aa;
+}
+
+.releaseNote a {
+  color: #6c63ff;
+}
+
+.codeBlock {
+  background: #1e1e2e;
+  border: 1px solid #2a2a3e;
+  border-radius: 8px;
+  padding: 1.25rem 1.5rem;
+  margin-bottom: 1rem;
+  overflow-x: auto;
+}
+
+.codeBlock code {
+  color: #e0e0e0;
+  font-size: 1rem;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+}
+
+.npmNote {
+  font-size: 0.95rem;
+  color: #8899aa;
+  line-height: 1.6;
+}
+
+.requirements {
+  list-style: none;
+  padding: 0;
+}
+
+.requirements li {
+  padding: 0.5rem 0;
+  color: #b8c5d6;
+  font-size: 1rem;
+  border-bottom: 1px solid #1e1e2e;
+}
+
+.requirements li:last-child {
+  border-bottom: none;
+}
+
+.requirements li::before {
+  content: '-- ';
+  color: #6c63ff;
+  font-weight: 600;
+}
