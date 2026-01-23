@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-01-22)
 ## Current Position
 
 Phase: 4 of 4 (npm Publishing)
-Plan: 1 of 2 in current phase
-Status: In progress
-Last activity: 2026-01-23 -- Completed 04-01-PLAN.md (npm publishing configuration)
+Plan: 2 of 2 in current phase
+Status: Phase complete -- ALL PHASES COMPLETE
+Last activity: 2026-01-23 -- Completed 04-02-PLAN.md (release workflow with publish-npm job)
 
-Progress: [████████░░] 86%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 6
-- Average duration: ~3.2 min
-- Total execution time: ~19 min
+- Total plans completed: 7
+- Average duration: ~2.9 min
+- Total execution time: ~20.5 min
 
 **By Phase:**
 
@@ -29,11 +29,11 @@ Progress: [████████░░] 86%
 |-------|-------|-------|----------|
 | 1 | 2 | ~4 min | ~2 min |
 | 2 | 3 | ~14 min | ~4.7 min |
-| 4 | 1 | ~1 min | ~1 min |
+| 4 | 2 | ~2.5 min | ~1.25 min |
 
 **Recent Trend:**
-- Last 5 plans: 01-02 ✓, 02-01 ✓, 02-02 ✓, 02-03 ✓, 04-01 ✓
-- Trend: Stable (fastest plan yet - config-only change)
+- Last 5 plans: 02-01 ✓, 02-02 ✓, 02-03 ✓, 04-01 ✓, 04-02 ✓
+- Trend: Stable -- all phases complete
 
 *Updated after each plan completion*
 
@@ -49,6 +49,7 @@ Recent decisions affecting current work:
 - [Roadmap]: Skip code signing in CI (CSC_IDENTITY_AUTO_DISCOVERY=false), defer to v2
 - [Roadmap]: npm package ships only bin/ (~5KB CLI), app downloaded from GitHub Releases
 - [04-01]: Explicit electron entry path replaces main field (main field caused src/ to leak into tarball)
+- [04-02]: Trigger on release published events (not drafts), ubuntu-latest for bin-only package
 - [02-01]: Skip close dialog in test mode for reliable E2E teardown
 - [02-01]: Use page.evaluate() for toolbar actions (hover-dependent UI)
 - [02-01]: Removed electron-playwright-helpers (unused after dialog fix)
@@ -78,5 +79,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-01-23
-Stopped at: Completed 04-01-PLAN.md -- Ready for 04-02 (npm publish)
+Stopped at: Completed 04-02-PLAN.md -- Phase 4 complete, ALL PHASES COMPLETE
 Resume file: None
