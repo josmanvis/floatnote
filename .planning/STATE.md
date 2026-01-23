@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-01-22)
 
 **Core value:** A persistent, transparent scratch space that's always one keyboard shortcut away
-**Current focus:** Phase 2 - E2E Tests
+**Current focus:** Phase 4 - npm Publishing
 
 ## Current Position
 
-Phase: 2 of 4 (E2E Tests)
-Plan: 3 of 3 in current phase
-Status: Phase complete
-Last activity: 2026-01-23 -- Completed 02-03-PLAN.md (persistence + settings E2E tests)
+Phase: 4 of 4 (npm Publishing)
+Plan: 1 of 2 in current phase
+Status: In progress
+Last activity: 2026-01-23 -- Completed 04-01-PLAN.md (npm publishing configuration)
 
-Progress: [██████░░░░] 62%
+Progress: [████████░░] 86%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 5
-- Average duration: ~3.5 min
-- Total execution time: ~18 min
+- Total plans completed: 6
+- Average duration: ~3.2 min
+- Total execution time: ~19 min
 
 **By Phase:**
 
@@ -29,10 +29,11 @@ Progress: [██████░░░░] 62%
 |-------|-------|-------|----------|
 | 1 | 2 | ~4 min | ~2 min |
 | 2 | 3 | ~14 min | ~4.7 min |
+| 4 | 1 | ~1 min | ~1 min |
 
 **Recent Trend:**
-- Last 5 plans: 01-01 ✓, 01-02 ✓, 02-01 ✓, 02-02 ✓, 02-03 ✓
-- Trend: Stable
+- Last 5 plans: 01-02 ✓, 02-01 ✓, 02-02 ✓, 02-03 ✓, 04-01 ✓
+- Trend: Stable (fastest plan yet - config-only change)
 
 *Updated after each plan completion*
 
@@ -47,6 +48,7 @@ Recent decisions affecting current work:
 - [Roadmap]: Don't restructure existing tests -- add integration/E2E alongside
 - [Roadmap]: Skip code signing in CI (CSC_IDENTITY_AUTO_DISCOVERY=false), defer to v2
 - [Roadmap]: npm package ships only bin/ (~5KB CLI), app downloaded from GitHub Releases
+- [04-01]: Explicit electron entry path replaces main field (main field caused src/ to leak into tarball)
 - [02-01]: Skip close dialog in test mode for reliable E2E teardown
 - [02-01]: Use page.evaluate() for toolbar actions (hover-dependent UI)
 - [02-01]: Removed electron-playwright-helpers (unused after dialog fix)
@@ -76,5 +78,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-01-23
-Stopped at: Completed 02-03-PLAN.md -- Phase 2 complete, ready for Phase 3
+Stopped at: Completed 04-01-PLAN.md -- Ready for 04-02 (npm publish)
 Resume file: None
