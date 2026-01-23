@@ -536,7 +536,8 @@ class Glassboard {
                     points: [point],
                     color: this.currentColor,
                     width: this.currentStrokeWidth,
-                    objectId: this.currentObjectId
+                    objectId: this.currentObjectId,
+                    tool: this.currentShape
                 };
                 this.currentLine = this.shapePreviewLine;
                 return;
@@ -692,11 +693,73 @@ class Glassboard {
         document.addEventListener('touchend', stopDrawing);
     }
 
+    // Determine shape type from a line object
+    getShapeType(line) {
+        if (line.tool) return line.tool;
+        // Heuristic fallback: infer from points array
+        const pts = line.points;
+        if (!pts || pts.length === 0) return 'freehand';
+        if (pts.length >= 60) return 'circle';
+        if (pts.length === 5 && Math.abs(pts[0].x - pts[4].x) < 1 && Math.abs(pts[0].y - pts[4].y) < 1) return 'rectangle';
+        if (pts.length === 4 && Math.abs(pts[0].x - pts[3].x) < 1 && Math.abs(pts[0].y - pts[3].y) < 1) return 'triangle';
+        if (pts.length === 2) return 'line';
+        if (pts.length === 5 && !(Math.abs(pts[0].x - pts[4].x) < 1 && Math.abs(pts[0].y - pts[4].y) < 1)) return 'arrow';
+        return 'freehand';
+    }
+
+    // Check if a point is inside a closed shape's fill area
+    isPointInsideShape(point, line) {
+        const shapeType = this.getShapeType(line);
+
+        if (shapeType === 'circle') {
+            // Ellipse: compute center and radii from bounding box
+            let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+            for (const p of line.points) {
+                minX = Math.min(minX, p.x);
+                minY = Math.min(minY, p.y);
+                maxX = Math.max(maxX, p.x);
+                maxY = Math.max(maxY, p.y);
+            }
+            const cx = (minX + maxX) / 2;
+            const cy = (minY + maxY) / 2;
+            const rx = (maxX - minX) / 2;
+            const ry = (maxY - minY) / 2;
+            if (rx === 0 || ry === 0) return false;
+            const dx = (point.x - cx) / rx;
+            const dy = (point.y - cy) / ry;
+            return (dx * dx + dy * dy) <= 1;
+        }
+
+        if (shapeType === 'rectangle' || shapeType === 'triangle') {
+            // Ray casting point-in-polygon
+            const vertices = line.points.slice(0, -1); // exclude closing duplicate
+            let inside = false;
+            for (let i = 0, j = vertices.length - 1; i < vertices.length; j = i++) {
+                if ((vertices[i].y > point.y) !== (vertices[j].y > point.y) &&
+                    point.x < (vertices[j].x - vertices[i].x) * (point.y - vertices[i].y) / (vertices[j].y - vertices[i].y) + vertices[i].x) {
+                    inside = !inside;
+                }
+            }
+            return inside;
+        }
+
+        // Lines, arrows, freehand: no fill area
+        return false;
+    }
+
     // Find which object (if any) is at the given point
     findObjectAtPoint(point) {
         const hitRadius = 10; // pixels tolerance for clicking
+
         for (let i = this.lines.length - 1; i >= 0; i--) {
             const line = this.lines[i];
+
+            // In select mode, check fill-area detection for closed shapes first
+            if (this.isSelectMode && this.isPointInsideShape(point, line)) {
+                return line.objectId;
+            }
+
+            // Fallback: point proximity to stroke
             for (const p of line.points) {
                 const dist = Math.sqrt((p.x - point.x) ** 2 + (p.y - point.y) ** 2);
                 if (dist < hitRadius + line.width / 2) {
