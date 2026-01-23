@@ -20,6 +20,12 @@ class Glassboard {
         this.currentLine = null;
         this.selectedTextId = null;
 
+        // Shape drawing state
+        this.currentShape = null;       // 'rectangle' | 'circle' | 'triangle' | 'line' | 'arrow' | null
+        this.isShapeMode = false;
+        this.shapeStartPoint = null;    // {x, y} where drag started
+        this.shapePreviewLine = null;   // Preview line during drag
+
         // Object grouping state
         this.currentObjectId = null;
         this.lastStrokeTime = 0;
@@ -300,11 +306,18 @@ class Glassboard {
         const setMode = (mode) => {
             this.isSelectMode = mode === 'select';
             this.isTextMode = mode === 'text';
+            this.isShapeMode = false;
+            this.currentShape = null;
 
             // Update button states
             selectModeBtn.classList.toggle('active', mode === 'select');
             drawModeBtn.classList.toggle('active', mode === 'draw');
             textModeBtn.classList.toggle('active', mode === 'text');
+
+            // Deactivate shape mode
+            const shapeToggleBtn = document.getElementById('shape-toggle');
+            if (shapeToggleBtn) shapeToggleBtn.classList.remove('active');
+            document.querySelectorAll('.shape-option').forEach(b => b.classList.remove('active'));
 
             // Update canvas/text container interactions
             if (mode === 'select') {
@@ -330,6 +343,29 @@ class Glassboard {
         selectModeBtn.addEventListener('click', () => setMode('select'));
         drawModeBtn.addEventListener('click', () => setMode('draw'));
         textModeBtn.addEventListener('click', () => setMode('text'));
+
+        // Shape tool dropdown
+        const shapeToggle = document.getElementById('shape-toggle');
+        const shapeOptions = document.querySelectorAll('.shape-option');
+
+        shapeOptions.forEach(btn => {
+            btn.addEventListener('click', () => {
+                shapeOptions.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                this.currentShape = btn.dataset.shape;
+                this.isShapeMode = true;
+                // Activate shape mode (similar to draw mode but with shape behavior)
+                this.isSelectMode = false;
+                this.isTextMode = false;
+                selectModeBtn.classList.remove('active');
+                drawModeBtn.classList.remove('active');
+                textModeBtn.classList.remove('active');
+                shapeToggle.classList.add('active');
+                this.canvas.style.pointerEvents = 'auto';
+                this.canvas.style.cursor = 'crosshair';
+                this.textContainer.style.pointerEvents = 'none';
+            });
+        });
 
         // Color picker dropdown
         const colorBtns = document.querySelectorAll('.color-grid .color-btn');
@@ -488,6 +524,24 @@ class Glassboard {
 
             const point = getPoint(e);
 
+            // Shape mode: start shape drawing
+            if (this.isShapeMode && this.currentShape) {
+                this.isDrawing = true;
+                this.app.classList.add('drawing');
+                this.shapeStartPoint = point;
+                // Create a preview line that will be updated during drag
+                const now = Date.now();
+                this.currentObjectId = now.toString();
+                this.shapePreviewLine = {
+                    points: [point],
+                    color: this.currentColor,
+                    width: this.currentStrokeWidth,
+                    objectId: this.currentObjectId
+                };
+                this.currentLine = this.shapePreviewLine;
+                return;
+            }
+
             // Check if clicking on an existing stroke (for selection)
             const clickedObjectId = this.findObjectAtPoint(point);
             if (clickedObjectId) {
@@ -540,6 +594,15 @@ class Glassboard {
 
             const point = getPoint(e);
 
+            // Shape mode: update preview
+            if (this.isShapeMode && this.isDrawing && this.shapeStartPoint) {
+                const shapePoints = this.generateShapePoints(this.currentShape, this.shapeStartPoint, point);
+                this.shapePreviewLine.points = shapePoints;
+                this.currentLine = this.shapePreviewLine;
+                this.redraw();
+                return;
+            }
+
             // Handle drag-box selection
             if (this.isSelecting && this.selectionStart) {
                 const x = Math.min(point.x, this.selectionStart.x);
@@ -568,6 +631,20 @@ class Glassboard {
         };
 
         const stopDrawing = (e) => {
+            // Shape mode: finalize shape
+            if (this.isShapeMode && this.isDrawing && this.shapeStartPoint) {
+                this.isDrawing = false;
+                this.app.classList.remove('drawing');
+                if (this.shapePreviewLine && this.shapePreviewLine.points.length > 1) {
+                    this.lines.push(this.shapePreviewLine);
+                    this.saveState();
+                }
+                this.shapePreviewLine = null;
+                this.shapeStartPoint = null;
+                this.currentLine = null;
+                return;
+            }
+
             // Handle drag-box selection completion
             if (this.isSelecting) {
                 this.isSelecting = false;
@@ -1504,6 +1581,26 @@ class Glassboard {
                     this.setMode('text');
                     return;
                 }
+                if ((e.key === 's' || e.key === 'S') && !e.metaKey && !e.ctrlKey) {
+                    if (this.currentShape) {
+                        // Re-activate shape mode with last used shape
+                        this.isShapeMode = true;
+                        this.isSelectMode = false;
+                        this.isTextMode = false;
+                        const shapeToggle = document.getElementById('shape-toggle');
+                        const selectModeBtn = document.getElementById('select-mode');
+                        const drawModeBtn = document.getElementById('draw-mode');
+                        const textModeBtn = document.getElementById('text-mode');
+                        selectModeBtn.classList.remove('active');
+                        drawModeBtn.classList.remove('active');
+                        textModeBtn.classList.remove('active');
+                        shapeToggle.classList.add('active');
+                        this.canvas.style.pointerEvents = 'auto';
+                        this.canvas.style.cursor = 'crosshair';
+                        this.textContainer.style.pointerEvents = 'none';
+                    }
+                    return;
+                }
                 if (e.key === 'f' || e.key === 'F') {
                     this.toggleFreeze();
                     return;
@@ -1839,6 +1936,90 @@ class Glassboard {
             this.ctx.lineTo(line.points[i].x, line.points[i].y);
         }
         this.ctx.stroke();
+    }
+
+    generateShapePoints(shape, start, end) {
+        const points = [];
+        switch (shape) {
+            case 'rectangle': {
+                points.push(
+                    { x: start.x, y: start.y },
+                    { x: end.x, y: start.y },
+                    { x: end.x, y: end.y },
+                    { x: start.x, y: end.y },
+                    { x: start.x, y: start.y } // close the rectangle
+                );
+                break;
+            }
+            case 'circle': {
+                // Generate points along an ellipse
+                const cx = (start.x + end.x) / 2;
+                const cy = (start.y + end.y) / 2;
+                const rx = Math.abs(end.x - start.x) / 2;
+                const ry = Math.abs(end.y - start.y) / 2;
+                const segments = 64;
+                for (let i = 0; i <= segments; i++) {
+                    const angle = (i / segments) * Math.PI * 2;
+                    points.push({
+                        x: cx + rx * Math.cos(angle),
+                        y: cy + ry * Math.sin(angle)
+                    });
+                }
+                break;
+            }
+            case 'triangle': {
+                // Isoceles triangle: top-center, bottom-right, bottom-left
+                const topX = (start.x + end.x) / 2;
+                const topY = Math.min(start.y, end.y);
+                const bottomY = Math.max(start.y, end.y);
+                const leftX = Math.min(start.x, end.x);
+                const rightX = Math.max(start.x, end.x);
+                points.push(
+                    { x: topX, y: topY },
+                    { x: rightX, y: bottomY },
+                    { x: leftX, y: bottomY },
+                    { x: topX, y: topY } // close the triangle
+                );
+                break;
+            }
+            case 'line': {
+                points.push(
+                    { x: start.x, y: start.y },
+                    { x: end.x, y: end.y }
+                );
+                break;
+            }
+            case 'arrow': {
+                // Line with arrowhead at end
+                const dx = end.x - start.x;
+                const dy = end.y - start.y;
+                const len = Math.sqrt(dx * dx + dy * dy);
+                if (len === 0) {
+                    points.push(start, end);
+                    break;
+                }
+                const headLen = Math.min(20, len * 0.3); // arrowhead length
+                const angle = Math.atan2(dy, dx);
+                const headAngle = Math.PI / 6; // 30 degrees
+
+                // Main line
+                points.push({ x: start.x, y: start.y });
+                points.push({ x: end.x, y: end.y });
+                // Left wing of arrowhead (pen-up simulated by returning to tip)
+                points.push({
+                    x: end.x - headLen * Math.cos(angle - headAngle),
+                    y: end.y - headLen * Math.sin(angle - headAngle)
+                });
+                points.push({ x: end.x, y: end.y }); // back to tip
+                // Right wing of arrowhead
+                points.push({
+                    x: end.x - headLen * Math.cos(angle + headAngle),
+                    y: end.y - headLen * Math.sin(angle + headAngle)
+                });
+                break;
+            }
+        }
+        return points;
     }
 
     drawCenterDot() {
