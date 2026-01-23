@@ -10,28 +10,28 @@ See: .planning/PROJECT.md (updated 2026-01-22)
 ## Current Position
 
 Phase: 2 of 4 (E2E Tests)
-Plan: 2 of 3 in current phase
-Status: In progress
-Last activity: 2026-01-22 -- Completed 02-02-PLAN.md (text, notes, clipboard E2E tests)
+Plan: 3 of 3 in current phase
+Status: Phase complete
+Last activity: 2026-01-23 -- Completed 02-03-PLAN.md (persistence + settings E2E tests)
 
-Progress: [████░░░░░░] 50%
+Progress: [██████░░░░] 62%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 4
+- Total plans completed: 5
 - Average duration: ~3.5 min
-- Total execution time: ~13 min
+- Total execution time: ~18 min
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 1 | 2 | ~4 min | ~2 min |
-| 2 | 2 | ~9 min | ~4.5 min |
+| 2 | 3 | ~14 min | ~4.7 min |
 
 **Recent Trend:**
-- Last 5 plans: 01-01 ✓, 01-02 ✓, 02-01 ✓, 02-02 ✓
+- Last 5 plans: 01-01 ✓, 01-02 ✓, 02-01 ✓, 02-02 ✓, 02-03 ✓
 - Trend: Stable
 
 *Updated after each plan completion*
@@ -53,6 +53,9 @@ Recent decisions affecting current work:
 - [02-02]: Use electronApp.evaluate for clipboard writes (main process context)
 - [02-02]: Generate PNG programmatically for nativeImage (no external tools)
 - [02-02]: Use waitForFunction for async data model assertions
+- [02-03]: Restart tests manage own Electron lifecycle (no shared fixture)
+- [02-03]: Use page.evaluate for text creation (canvas overlay blocks text-container clicks)
+- [02-03]: Use dispatchEvent for settings changes to trigger save handlers
 
 ### Pending Todos
 
@@ -62,6 +65,7 @@ None yet.
 
 - E2E tests note: toolbar buttons require hover to be clickable; use page.evaluate() or force:true
 - Clipboard test note: nativeImage.createFromBuffer requires properly encoded PNG (some base64 PNGs produce empty images)
+- Persistence note: restoreTextItem duplicates textItems array entries on load (existing app behavior)
 
 ### Quick Tasks Completed
 
@@ -71,6 +75,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-01-22
-Stopped at: Completed 02-02-PLAN.md, ready for 02-03
+Last session: 2026-01-23
+Stopped at: Completed 02-03-PLAN.md -- Phase 2 complete, ready for Phase 3
 Resume file: None
