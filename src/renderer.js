@@ -42,6 +42,9 @@ class Glassboard {
         // Rotation state
         this.rotation = 0;
 
+        // Freeze state (locks pan/zoom/rotation)
+        this.frozen = false;
+
         // Settings
         this.settings = {
             pinchZoom: true,
@@ -102,6 +105,7 @@ class Glassboard {
         this.setupClipboardPaste();
         this.setupSettings();
         this.setupGestures();
+        this.setupFreezeToggle();
         this.setupFileDrop();
 
         // Initialize with empty note if needed
@@ -399,6 +403,24 @@ class Glassboard {
         }
     }
 
+    setupFreezeToggle() {
+        const freezeBtn = document.getElementById('freeze-btn');
+        if (freezeBtn) {
+            freezeBtn.addEventListener('click', () => {
+                this.toggleFreeze();
+            });
+        }
+    }
+
+    toggleFreeze() {
+        this.frozen = !this.frozen;
+        const freezeBtn = document.getElementById('freeze-btn');
+        if (freezeBtn) {
+            freezeBtn.classList.toggle('active', this.frozen);
+        }
+        this.autoSave();
+    }
+
     animatePinIcon() {
         const pinToggle = document.querySelector('.pin-toggle');
         if (pinToggle) {
@@ -438,9 +460,9 @@ class Glassboard {
         `;
         this.app.appendChild(zoomControls);
 
-        document.getElementById('zoom-out').addEventListener('click', () => this.zoomOut());
-        document.getElementById('zoom-in').addEventListener('click', () => this.zoomIn());
-        document.getElementById('zoom-reset').addEventListener('click', () => this.resetTransform());
+        document.getElementById('zoom-out').addEventListener('click', () => { if (!this.frozen) this.zoomOut(); });
+        document.getElementById('zoom-in').addEventListener('click', () => { if (!this.frozen) this.zoomIn(); });
+        document.getElementById('zoom-reset').addEventListener('click', () => { if (!this.frozen) this.resetTransform(); });
     }
 
 
@@ -1427,21 +1449,21 @@ class Glassboard {
             // Cmd+Plus to zoom in
             if ((e.metaKey || e.ctrlKey) && (e.key === '=' || e.key === '+')) {
                 e.preventDefault();
-                this.zoomIn();
+                if (!this.frozen) this.zoomIn();
                 return;
             }
 
             // Cmd+Minus to zoom out
             if ((e.metaKey || e.ctrlKey) && e.key === '-') {
                 e.preventDefault();
-                this.zoomOut();
+                if (!this.frozen) this.zoomOut();
                 return;
             }
 
             // Cmd+0 to reset view (zoom, pan, rotation)
             if ((e.metaKey || e.ctrlKey) && e.key === '0') {
                 e.preventDefault();
-                this.resetTransform();
+                if (!this.frozen) this.resetTransform();
                 return;
             }
 
@@ -1480,6 +1502,10 @@ class Glassboard {
                 }
                 if (e.key === 't' || e.key === 'T') {
                     this.setMode('text');
+                    return;
+                }
+                if (e.key === 'f' || e.key === 'F') {
+                    this.toggleFreeze();
                     return;
                 }
                 // Size shortcuts: Cmd+1=sm, Cmd+2=md, Cmd+3=lg
@@ -1682,17 +1708,17 @@ class Glassboard {
             `;
 
             menu.querySelector('[data-action="zoom-in"]').addEventListener('click', () => {
-                this.zoomIn();
+                if (!this.frozen) this.zoomIn();
                 this.hideContextMenu();
             });
 
             menu.querySelector('[data-action="zoom-out"]').addEventListener('click', () => {
-                this.zoomOut();
+                if (!this.frozen) this.zoomOut();
                 this.hideContextMenu();
             });
 
             menu.querySelector('[data-action="reset-zoom"]').addEventListener('click', () => {
-                this.resetTransform();
+                if (!this.frozen) this.resetTransform();
                 this.hideContextMenu();
             });
 
@@ -2591,6 +2617,7 @@ class Glassboard {
         this.app.addEventListener('wheel', (e) => {
             // Pinch-to-zoom (trackpad sends ctrlKey with pinch)
             if (e.ctrlKey && this.settings.pinchZoom) {
+                if (this.frozen) return;
                 e.preventDefault();
                 const delta = -e.deltaY * 0.01;
                 const newZoom = Math.max(this.minZoom, Math.min(this.maxZoom, this.zoomLevel + delta));
@@ -2602,7 +2629,7 @@ class Glassboard {
             // Two-finger pan (no modifier key)
             if (this.settings.pan && !e.ctrlKey && !e.metaKey) {
                 // Only pan if not drawing
-                if (this.isDrawing) return;
+                if (this.isDrawing || this.frozen) return;
 
                 e.preventDefault();
                 this.panX -= e.deltaX;
@@ -2620,6 +2647,7 @@ class Glassboard {
 
         this.app.addEventListener('gesturechange', (e) => {
             e.preventDefault();
+            if (this.frozen) return;
 
             // Pinch-to-zoom
             if (this.settings.pinchZoom) {
@@ -2645,7 +2673,7 @@ class Glassboard {
             const now = Date.now();
             if (now - lastTap < 300) {
                 // Double-tap detected - reset transform
-                this.resetTransform();
+                if (!this.frozen) this.resetTransform();
             }
             lastTap = now;
         });
@@ -2838,7 +2866,8 @@ class Glassboard {
                 zoomLevel: this.zoomLevel,
                 panX: this.panX,
                 panY: this.panY,
-                rotation: this.rotation
+                rotation: this.rotation,
+                frozen: this.frozen
             }
         };
 
@@ -3027,7 +3056,9 @@ class Glassboard {
                     this.panX = data.transform.panX || 0;
                     this.panY = data.transform.panY || 0;
                     this.rotation = data.transform.rotation || 0;
+                    this.frozen = data.transform.frozen || false;
                     this.applyTransform();
+                    document.getElementById('freeze-btn')?.classList.toggle('active', this.frozen);
                 }
 
                 // Initialize history with loaded state

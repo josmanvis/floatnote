@@ -65,11 +65,11 @@ div#window-top-edge-drag-handle {
     height: 4px;
     width: calc(100% - 40px);
     -webkit-app-region: drag;
-    background-color: red;
+    background-color: transparent;
     border-radius: 10px;
 }
 div#window-top-edge-drag-handle:hover {
-    background-color: green;
+    background-color: rgba(0, 0, 0, 0.3);
     height: 10px;
     app-region: drag;
     user-select: none;
@@ -226,6 +226,15 @@ div#window-top-edge-drag-handle:hover {
 
 .tool-btn.active {
     background: rgba(255, 255, 255, 0.25);
+}
+
+#freeze-btn.active {
+    background: rgba(56, 189, 248, 0.3);
+    color: #38bdf8;
+}
+
+#freeze-btn.active:hover {
+    background: rgba(56, 189, 248, 0.4);
 }
 
 .tool-btn.danger {
