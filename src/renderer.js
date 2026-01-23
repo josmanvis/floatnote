@@ -36,6 +36,18 @@ class Glassboard {
         this.isDraggingObject = false;
         this.dragStartPoint = null;
 
+        // Resize state
+        this.activeHandle = null;
+        this.handleSize = 8;
+        this.isResizing = false;
+        this.resizeAnchor = null;
+        this.resizeStartBounds = null;
+
+        // Shape rotation state
+        this.isRotating = false;
+        this.rotateStartAngle = 0;
+        this.rotatePivot = null;
+
         // Zoom state
         this.zoomLevel = 1;
         this.minZoom = 0.25;
@@ -543,6 +555,25 @@ class Glassboard {
                 return;
             }
 
+            // Check if clicking on a resize/rotate handle of selected object
+            if (this.selectedObjectId) {
+                const handleId = this.getHandleAtPoint(point);
+                if (handleId === 'rotate') {
+                    this.isRotating = true;
+                    const bounds = this.getObjectBounds(this.selectedObjectId);
+                    this.rotatePivot = { x: bounds.x + bounds.width / 2, y: bounds.y + bounds.height / 2 };
+                    this.rotateStartAngle = Math.atan2(point.y - this.rotatePivot.y, point.x - this.rotatePivot.x);
+                    this.canvas.style.cursor = 'grabbing';
+                    return;
+                }
+                if (handleId) {
+                    this.isResizing = true;
+                    this.activeHandle = handleId;
+                    this.resizeStartBounds = this.getObjectBounds(this.selectedObjectId);
+                    return;
+                }
+            }
+
             // Check if clicking on an existing stroke (for selection)
             const clickedObjectId = this.findObjectAtPoint(point);
             if (clickedObjectId) {
@@ -604,6 +635,70 @@ class Glassboard {
                 return;
             }
 
+            // Handle resize
+            if (this.isResizing && this.selectedObjectId && this.resizeStartBounds) {
+                const bounds = this.resizeStartBounds;
+                let newBounds = { x: bounds.x, y: bounds.y, width: bounds.width, height: bounds.height };
+
+                switch (this.activeHandle) {
+                    case 'nw':
+                        newBounds.width += newBounds.x - point.x;
+                        newBounds.height += newBounds.y - point.y;
+                        newBounds.x = point.x;
+                        newBounds.y = point.y;
+                        break;
+                    case 'n':
+                        newBounds.height += newBounds.y - point.y;
+                        newBounds.y = point.y;
+                        break;
+                    case 'ne':
+                        newBounds.width = point.x - newBounds.x;
+                        newBounds.height += newBounds.y - point.y;
+                        newBounds.y = point.y;
+                        break;
+                    case 'e':
+                        newBounds.width = point.x - newBounds.x;
+                        break;
+                    case 'se':
+                        newBounds.width = point.x - newBounds.x;
+                        newBounds.height = point.y - newBounds.y;
+                        break;
+                    case 's':
+                        newBounds.height = point.y - newBounds.y;
+                        break;
+                    case 'sw':
+                        newBounds.width += newBounds.x - point.x;
+                        newBounds.x = point.x;
+                        newBounds.height = point.y - newBounds.y;
+                        break;
+                    case 'w':
+                        newBounds.width += newBounds.x - point.x;
+                        newBounds.x = point.x;
+                        break;
+                }
+
+                // Prevent zero/negative dimensions
+                if (newBounds.width > 5 && newBounds.height > 5) {
+                    this.resizeObject(this.selectedObjectId, bounds, newBounds);
+                    this.resizeStartBounds = this.getObjectBounds(this.selectedObjectId);
+                }
+                return;
+            }
+
+            // Handle rotation
+            if (this.isRotating && this.selectedObjectId && this.rotatePivot) {
+                const currentAngle = Math.atan2(point.y - this.rotatePivot.y, point.x - this.rotatePivot.x);
+                const deltaAngle = currentAngle - this.rotateStartAngle;
+                this.rotateObject(this.selectedObjectId, this.rotatePivot, deltaAngle);
+                this.rotateStartAngle = currentAngle;
+                // Update pivot to new center after rotation
+                const newBounds = this.getObjectBounds(this.selectedObjectId);
+                if (newBounds) {
+                    this.rotatePivot = { x: newBounds.x + newBounds.width / 2, y: newBounds.y + newBounds.height / 2 };
+                }
+                return;
+            }
+
             // Handle drag-box selection
             if (this.isSelecting && this.selectionStart) {
                 const x = Math.min(point.x, this.selectionStart.x);
@@ -623,6 +718,19 @@ class Glassboard {
                 const dy = point.y - this.dragStartPoint.y;
                 this.moveObject(this.selectedObjectId, dx, dy);
                 this.dragStartPoint = point;
+                return;
+            }
+
+            // Cursor updates when hovering in select mode
+            if (this.isSelectMode && this.selectedObjectId && !this.isDrawing) {
+                const handleId = this.getHandleAtPoint(point);
+                if (handleId) {
+                    this.canvas.style.cursor = this.getHandleCursor(handleId);
+                } else {
+                    // Check if over selected object body
+                    const hoveredId = this.findObjectAtPoint(point);
+                    this.canvas.style.cursor = hoveredId === this.selectedObjectId ? 'move' : 'default';
+                }
                 return;
             }
 
@@ -662,6 +770,22 @@ class Glassboard {
                     this.selectObjectsInRect(rect);
                 }
                 this.selectionStart = null;
+                return;
+            }
+
+            if (this.isResizing) {
+                this.isResizing = false;
+                this.activeHandle = null;
+                this.resizeStartBounds = null;
+                this.saveState();
+                return;
+            }
+
+            if (this.isRotating) {
+                this.isRotating = false;
+                this.rotatePivot = null;
+                this.canvas.style.cursor = 'default';
+                this.saveState();
                 return;
             }
 
@@ -789,6 +913,110 @@ class Glassboard {
                 line.points.forEach(p => {
                     p.x += dx;
                     p.y += dy;
+                });
+            }
+        });
+        this.redraw();
+    }
+
+    // Get bounding box of an object (with padding)
+    getObjectBounds(objectId, padding = 8) {
+        const objectLines = this.lines.filter(l => l.objectId === objectId);
+        if (objectLines.length === 0) return null;
+
+        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+        objectLines.forEach(line => {
+            line.points.forEach(p => {
+                minX = Math.min(minX, p.x);
+                minY = Math.min(minY, p.y);
+                maxX = Math.max(maxX, p.x);
+                maxY = Math.max(maxY, p.y);
+            });
+        });
+
+        return {
+            x: minX - padding,
+            y: minY - padding,
+            width: (maxX - minX) + padding * 2,
+            height: (maxY - minY) + padding * 2,
+            rawMinX: minX,
+            rawMinY: minY,
+            rawMaxX: maxX,
+            rawMaxY: maxY
+        };
+    }
+
+    // Get 8 handle positions for a bounding box
+    getHandlePositions(bounds) {
+        const { x, y, width, height } = bounds;
+        const cx = x + width / 2;
+        const cy = y + height / 2;
+        return {
+            'nw': { x: x, y: y },
+            'n':  { x: cx, y: y },
+            'ne': { x: x + width, y: y },
+            'e':  { x: x + width, y: cy },
+            'se': { x: x + width, y: y + height },
+            's':  { x: cx, y: y + height },
+            'sw': { x: x, y: y + height },
+            'w':  { x: x, y: cy },
+            'rotate': { x: cx, y: y - 25 }
+        };
+    }
+
+    // Check if a point hits a resize/rotate handle
+    getHandleAtPoint(point) {
+        if (!this.selectedObjectId) return null;
+        const bounds = this.getObjectBounds(this.selectedObjectId);
+        if (!bounds) return null;
+
+        const handles = this.getHandlePositions(bounds);
+        const hitDist = this.handleSize / 2 + 4; // a little extra tolerance
+
+        for (const [id, pos] of Object.entries(handles)) {
+            const dist = Math.sqrt((point.x - pos.x) ** 2 + (point.y - pos.y) ** 2);
+            if (dist < hitDist) return id;
+        }
+        return null;
+    }
+
+    // Get the cursor style for a given handle
+    getHandleCursor(handleId) {
+        const cursors = {
+            'nw': 'nwse-resize', 'se': 'nwse-resize',
+            'ne': 'nesw-resize', 'sw': 'nesw-resize',
+            'n': 'ns-resize', 's': 'ns-resize',
+            'e': 'ew-resize', 'w': 'ew-resize',
+            'rotate': 'grab'
+        };
+        return cursors[handleId] || 'default';
+    }
+
+    // Resize an object by mapping points from old bounds to new bounds
+    resizeObject(objectId, oldBounds, newBounds) {
+        if (oldBounds.width === 0 || oldBounds.height === 0) return;
+        this.lines.forEach(line => {
+            if (line.objectId === objectId) {
+                line.points.forEach(p => {
+                    p.x = newBounds.x + ((p.x - oldBounds.x) / oldBounds.width) * newBounds.width;
+                    p.y = newBounds.y + ((p.y - oldBounds.y) / oldBounds.height) * newBounds.height;
+                });
+            }
+        });
+        this.redraw();
+    }
+
+    // Rotate all points of an object around a center by an angle
+    rotateObject(objectId, center, angle) {
+        const cos = Math.cos(angle);
+        const sin = Math.sin(angle);
+        this.lines.forEach(line => {
+            if (line.objectId === objectId) {
+                line.points.forEach(p => {
+                    const dx = p.x - center.x;
+                    const dy = p.y - center.y;
+                    p.x = dx * cos - dy * sin + center.x;
+                    p.y = dx * sin + dy * cos + center.y;
                 });
             }
         });
@@ -2107,44 +2335,53 @@ class Glassboard {
     }
 
     drawSelectionHighlight() {
-        // Get bounding box of selected object
-        const selectedLines = this.lines.filter(l => l.objectId === this.selectedObjectId);
-        if (selectedLines.length === 0) return;
+        const bounds = this.getObjectBounds(this.selectedObjectId);
+        if (!bounds) return;
 
-        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-        selectedLines.forEach(line => {
-            line.points.forEach(p => {
-                minX = Math.min(minX, p.x);
-                minY = Math.min(minY, p.y);
-                maxX = Math.max(maxX, p.x);
-                maxY = Math.max(maxY, p.y);
-            });
-        });
-
-        // Add padding
-        const padding = 8;
-        minX -= padding;
-        minY -= padding;
-        maxX += padding;
-        maxY += padding;
+        const { x, y, width, height } = bounds;
 
         // Draw selection box
         this.ctx.strokeStyle = '#3b82f6';
         this.ctx.lineWidth = 2;
         this.ctx.setLineDash([5, 5]);
-        this.ctx.strokeRect(minX, minY, maxX - minX, maxY - minY);
+        this.ctx.strokeRect(x, y, width, height);
         this.ctx.setLineDash([]);
 
-        // Draw corner handles
-        const handleSize = 8;
-        this.ctx.fillStyle = '#3b82f6';
-        const corners = [
-            [minX, minY], [maxX, minY],
-            [minX, maxY], [maxX, maxY]
-        ];
-        corners.forEach(([x, y]) => {
-            this.ctx.fillRect(x - handleSize/2, y - handleSize/2, handleSize, handleSize);
+        // Get handle positions
+        const handles = this.getHandlePositions(bounds);
+        const handleSize = this.handleSize;
+
+        // Draw 8 resize handles (white fill, blue border)
+        const resizeHandles = ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'];
+        resizeHandles.forEach(id => {
+            const pos = handles[id];
+            this.ctx.fillStyle = '#ffffff';
+            this.ctx.fillRect(pos.x - handleSize/2, pos.y - handleSize/2, handleSize, handleSize);
+            this.ctx.strokeStyle = '#3b82f6';
+            this.ctx.lineWidth = 2;
+            this.ctx.setLineDash([]);
+            this.ctx.strokeRect(pos.x - handleSize/2, pos.y - handleSize/2, handleSize, handleSize);
         });
+
+        // Draw rotation handle: line from top-center to rotation circle
+        const topCenter = handles['n'];
+        const rotatePos = handles['rotate'];
+        this.ctx.beginPath();
+        this.ctx.strokeStyle = '#3b82f6';
+        this.ctx.lineWidth = 1;
+        this.ctx.setLineDash([]);
+        this.ctx.moveTo(topCenter.x, topCenter.y);
+        this.ctx.lineTo(rotatePos.x, rotatePos.y);
+        this.ctx.stroke();
+
+        // Draw rotation circle
+        this.ctx.beginPath();
+        this.ctx.arc(rotatePos.x, rotatePos.y, 6, 0, Math.PI * 2);
+        this.ctx.fillStyle = '#ffffff';
+        this.ctx.fill();
+        this.ctx.strokeStyle = '#3b82f6';
+        this.ctx.lineWidth = 2;
+        this.ctx.stroke();
     }
 
     // Draw selection highlight for a specific object (used for multi-select)
