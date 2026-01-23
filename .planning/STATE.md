@@ -12,7 +12,7 @@ See: .planning/PROJECT.md (updated 2026-01-22)
 Phase: 3 of 4 (CI/CD Pipeline)
 Plan: 2 of 2 in current phase
 Status: Phase complete -- ALL PHASES COMPLETE
-Last activity: 2026-01-23 -- Completed quick task 005: interactive shapes select/resize/rotate (v1.0.7)
+Last activity: 2026-01-23 -- Completed quick task 006: Docusaurus website for GitHub Pages
 
 Progress: [██████████] 100%
 
@@ -81,9 +81,10 @@ None yet.
 | 003 | Add shape drawing with toolbar dropdown | 2026-01-23 | 2fb4a5d | [003-add-shape-drawing-with-toolbar-dropdown](./quick/003-add-shape-drawing-with-toolbar-dropdown/) |
 | 004 | Publish a new build (v1.0.6) | 2026-01-23 | 6367dba | [004-publish-a-new-build](./quick/004-publish-a-new-build/) |
 | 005 | Interactive shapes: select, resize, rotate | 2026-01-23 | 93d469d | [005-interactive-shapes-select-resize-rotate](./quick/005-interactive-shapes-select-resize-rotate/) |
+| 006 | Docusaurus website for GitHub Pages | 2026-01-23 | 1c76fc0 | [006-docusaurus-website-github-pages](./quick/006-docusaurus-website-github-pages/) |
 
 ## Session Continuity
 
 Last session: 2026-01-23
-Stopped at: Completed quick task 005: interactive shapes select/resize/rotate (v1.0.7)
+Stopped at: Completed quick task 006: Docusaurus website for GitHub Pages
 Resume file: None
