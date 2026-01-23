@@ -14,7 +14,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Integration Tests** - IPC and preload bridge contracts verified with real source code
 - [x] **Phase 2: E2E Tests** - Core user flows verified in real Electron app via Playwright
-- [ ] **Phase 3: CI/CD Pipeline** - Automated testing, building, and releasing on GitHub Actions
+- [x] **Phase 3: CI/CD Pipeline** - Automated testing, building, and releasing on GitHub Actions
 - [x] **Phase 4: npm Publishing** - CLI-only package published to npm, downloads app from Releases
 
 ## Phase Details
@@ -65,8 +65,8 @@ Plans:
 **Plans:** 2 plans
 
 Plans:
-- [ ] 03-01-PLAN.md -- Test workflow (push/PR triggers, ubuntu runner, npm test)
-- [ ] 03-02-PLAN.md -- Release workflow (tag trigger, macos runner, electron-builder, GitHub Release creation)
+- [x] 03-01-PLAN.md -- Test workflow (push/PR triggers, ubuntu runner, npm test)
+- [x] 03-02-PLAN.md -- Release workflow (tag trigger, macos runner, electron-builder, GitHub Release creation)
 
 ### Phase 4: npm Publishing
 **Goal**: `npx floatnote` installs a minimal CLI package from npm that downloads and launches the app from GitHub Releases
@@ -92,5 +92,5 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4
 |-------|----------------|--------|-----------|
 | 1. Integration Tests | 2/2 | Complete | 2026-01-22 |
 | 2. E2E Tests | 3/3 | Complete | 2026-01-23 |
-| 3. CI/CD Pipeline | 0/2 | Not started | - |
+| 3. CI/CD Pipeline | 2/2 | Complete | 2026-01-23 |
 | 4. npm Publishing | 2/2 | Complete | 2026-01-23 |

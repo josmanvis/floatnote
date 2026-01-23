@@ -20,12 +20,12 @@ Requirements for this milestone: test core flows, automate builds, publish to np
 
 ### CI/CD
 
-- [ ] **CICD-01**: GitHub Actions workflow runs tests on every push to main and on PRs
-- [ ] **CICD-02**: GitHub Actions workflow builds macOS app (DMG + ZIP) on version tag push
-- [ ] **CICD-03**: Build produces both x64 and arm64 (Apple Silicon) artifacts
-- [ ] **CICD-04**: Tag push creates GitHub Release with built artifacts attached
-- [ ] **CICD-05**: Release notes auto-generated from commits since last tag
-- [ ] **CICD-06**: Version management uses `npm version` for atomic version + tag creation
+- [x] **CICD-01**: GitHub Actions workflow runs tests on every push to main and on PRs
+- [x] **CICD-02**: GitHub Actions workflow builds macOS app (DMG + ZIP) on version tag push
+- [x] **CICD-03**: Build produces both x64 and arm64 (Apple Silicon) artifacts
+- [x] **CICD-04**: Tag push creates GitHub Release with built artifacts attached
+- [x] **CICD-05**: Release notes auto-generated from commits since last tag
+- [x] **CICD-06**: Version management uses `npm version` for atomic version + tag creation
 
 ### npm Publishing
 
@@ -83,12 +83,12 @@ Deferred to future milestone. Tracked but not in current roadmap.
 | TEST-06 | Phase 2 | Pending |
 | TEST-07 | Phase 2 | Pending |
 | TEST-08 | Phase 2 | Pending |
-| CICD-01 | Phase 3 | Pending |
-| CICD-02 | Phase 3 | Pending |
-| CICD-03 | Phase 3 | Pending |
-| CICD-04 | Phase 3 | Pending |
-| CICD-05 | Phase 3 | Pending |
-| CICD-06 | Phase 3 | Pending |
+| CICD-01 | Phase 3 | Complete |
+| CICD-02 | Phase 3 | Complete |
+| CICD-03 | Phase 3 | Complete |
+| CICD-04 | Phase 3 | Complete |
+| CICD-05 | Phase 3 | Complete |
+| CICD-06 | Phase 3 | Complete |
 | NPM-01 | Phase 4 | Complete |
 | NPM-02 | Phase 4 | Complete |
 | NPM-03 | Phase 4 | Complete |
