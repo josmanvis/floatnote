@@ -12,7 +12,7 @@ See: .planning/PROJECT.md (updated 2026-01-22)
 Phase: 3 of 4 (CI/CD Pipeline)
 Plan: 2 of 2 in current phase
 Status: Phase complete -- ALL PHASES COMPLETE
-Last activity: 2026-01-23 -- Completed 03-02-PLAN.md (build and release pipeline)
+Last activity: 2026-01-23 -- Completed quick task 002: publish a new build
 
 Progress: [██████████] 100%
 
@@ -77,6 +77,7 @@ None yet.
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
 | 001 | Fix opacity settings bg color from white to black | 2026-01-22 | d8a30dd | [001-the-opacity-settings-are-using-a-bg-colo](./quick/001-the-opacity-settings-are-using-a-bg-colo/) |
+| 002 | Publish a new build (v1.0.3) | 2026-01-23 | bbe24d9 | [002-publish-a-new-build](./quick/002-publish-a-new-build/) |
 
 ## Session Continuity
 
