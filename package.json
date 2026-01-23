@@ -47,6 +47,9 @@
   },
   "build": {
     "appId": "com.floatnote.app",
+    "extraMetadata": {
+      "main": "src/main.js"
+    },
     "productName": "Floatnote",
     "mac": {
       "category": "public.app-category.productivity",
