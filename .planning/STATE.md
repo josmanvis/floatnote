@@ -5,7 +5,7 @@
 See: .planning/PROJECT.md (updated 2026-01-22)
 
 **Core value:** A persistent, transparent scratch space that's always one keyboard shortcut away
-**Current focus:** Phase 5 - Layers and Layer Management
+**Current focus:** All phases complete
 
 ## Current Position
 

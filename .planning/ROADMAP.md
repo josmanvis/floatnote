@@ -16,7 +16,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 2: E2E Tests** - Core user flows verified in real Electron app via Playwright
 - [x] **Phase 3: CI/CD Pipeline** - Automated testing, building, and releasing on GitHub Actions
 - [x] **Phase 4: npm Publishing** - CLI-only package published to npm, downloads app from Releases
-- [ ] **Phase 5: Layers and Layer Management** - Modern minimal layer system for organizing drawing elements
+- [x] **Phase 5: Layers and Layer Management** - Modern minimal layer system for organizing drawing elements
 
 ## Phase Details
 
@@ -99,8 +99,8 @@ Plans:
 **Plans:** 2 plans
 
 Plans:
-- [ ] 05-01-PLAN.md -- Layer data model, migration, getters, undo/redo, multi-layer rendering, shape selection fix
-- [ ] 05-02-PLAN.md -- Layer panel UI (HTML/CSS/JS), all layer operations, keyboard shortcut, integration polish
+- [x] 05-01-PLAN.md -- Layer data model, migration, getters, undo/redo, multi-layer rendering, shape selection fix
+- [x] 05-02-PLAN.md -- Layer panel UI (HTML/CSS/JS), all layer operations, keyboard shortcut, integration polish
 
 ## Progress
 
@@ -113,4 +113,4 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5
 | 2. E2E Tests | 3/3 | Complete | 2026-01-23 |
 | 3. CI/CD Pipeline | 2/2 | Complete | 2026-01-23 |
 | 4. npm Publishing | 2/2 | Complete | 2026-01-23 |
-| 5. Layers and Layer Management | 0/? | Planning | — |
+| 5. Layers and Layer Management | 2/2 | Complete | 2026-01-23 |
