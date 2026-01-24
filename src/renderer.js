@@ -210,6 +210,39 @@ class Glassboard {
         return this.getActiveLayer()?.locked || false;
     }
 
+    getAllVisibleLines() {
+        const note = this.notes[this.currentNoteIndex];
+        if (!note || !note.layers) return [];
+        const allLines = [];
+        note.layers.forEach(layer => {
+            if (layer.visible) {
+                allLines.push(...layer.lines);
+            }
+        });
+        return allLines;
+    }
+
+    findLayerForObject(objectId) {
+        const note = this.notes[this.currentNoteIndex];
+        if (!note || !note.layers) return null;
+        for (const layer of note.layers) {
+            if (!layer.visible) continue;
+            if (layer.lines.some(l => l.objectId === objectId)) return layer.id;
+        }
+        return null;
+    }
+
+    updateDOMVisibility() {
+        const note = this.notes[this.currentNoteIndex];
+        if (!note || !note.layers) return;
+        note.layers.forEach(layer => {
+            const display = layer.visible ? '' : 'none';
+            this.textContainer.querySelectorAll(`[data-layer-id="${layer.id}"]`).forEach(el => {
+                el.style.display = display;
+            });
+        });
+    }
+
     createEmptyNote() {
         // Get viewport dimensions for origin calculation
         const rect = this.canvas?.getBoundingClientRect() || { width: 800, height: 600 };
@@ -919,23 +952,40 @@ class Glassboard {
         return false;
     }
 
-    // Find which object (if any) is at the given point
+    // Find which object (if any) is at the given point (searches all visible, unlocked layers)
     findObjectAtPoint(point) {
         const hitRadius = 10; // pixels tolerance for clicking
+        const note = this.notes[this.currentNoteIndex];
+        if (!note || !note.layers) return null;
 
-        for (let i = this.lines.length - 1; i >= 0; i--) {
-            const line = this.lines[i];
+        // Search layers in reverse order (top layer = last in array)
+        for (let li = note.layers.length - 1; li >= 0; li--) {
+            const layer = note.layers[li];
+            if (!layer.visible || layer.locked) continue;
 
-            // In select mode, check fill-area detection for closed shapes first
-            if (this.isSelectMode && this.isPointInsideShape(point, line)) {
-                return line.objectId;
-            }
+            for (let i = layer.lines.length - 1; i >= 0; i--) {
+                const line = layer.lines[i];
 
-            // Fallback: point proximity to stroke
-            for (const p of line.points) {
-                const dist = Math.sqrt((p.x - point.x) ** 2 + (p.y - point.y) ** 2);
-                if (dist < hitRadius + line.width / 2) {
+                // Check fill-area for closed shapes (works in all modes - bug fix)
+                if (this.isPointInsideShape(point, line)) {
+                    // Auto-switch to this layer if not active
+                    if (note.activeLayerId !== layer.id) {
+                        note.activeLayerId = layer.id;
+                        if (this.updateLayerPanel) this.updateLayerPanel();
+                    }
                     return line.objectId;
+                }
+
+                // Point proximity to stroke
+                for (const p of line.points) {
+                    const dist = Math.sqrt((p.x - point.x) ** 2 + (p.y - point.y) ** 2);
+                    if (dist < hitRadius + line.width / 2) {
+                        if (note.activeLayerId !== layer.id) {
+                            note.activeLayerId = layer.id;
+                            if (this.updateLayerPanel) this.updateLayerPanel();
+                        }
+                        return line.objectId;
+                    }
                 }
             }
         }
@@ -954,9 +1004,9 @@ class Glassboard {
         this.redraw();
     }
 
-    // Move all strokes of an object by dx, dy
+    // Move all strokes of an object by dx, dy (searches all visible layers)
     moveObject(objectId, dx, dy) {
-        this.lines.forEach(line => {
+        this.getAllVisibleLines().forEach(line => {
             if (line.objectId === objectId) {
                 line.points.forEach(p => {
                     p.x += dx;
@@ -967,9 +1017,9 @@ class Glassboard {
         this.redraw();
     }
 
-    // Get bounding box of an object (with padding)
+    // Get bounding box of an object (with padding) - searches all visible layers
     getObjectBounds(objectId, padding = 8) {
-        const objectLines = this.lines.filter(l => l.objectId === objectId);
+        const objectLines = this.getAllVisibleLines().filter(l => l.objectId === objectId);
         if (objectLines.length === 0) return null;
 
         let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
@@ -1040,10 +1090,10 @@ class Glassboard {
         return cursors[handleId] || 'default';
     }
 
-    // Resize an object by mapping points from old bounds to new bounds
+    // Resize an object by mapping points from old bounds to new bounds (searches all visible layers)
     resizeObject(objectId, oldBounds, newBounds) {
         if (oldBounds.width === 0 || oldBounds.height === 0) return;
-        this.lines.forEach(line => {
+        this.getAllVisibleLines().forEach(line => {
             if (line.objectId === objectId) {
                 line.points.forEach(p => {
                     p.x = newBounds.x + ((p.x - oldBounds.x) / oldBounds.width) * newBounds.width;
@@ -1054,11 +1104,11 @@ class Glassboard {
         this.redraw();
     }
 
-    // Rotate all points of an object around a center by an angle
+    // Rotate all points of an object around a center by an angle (searches all visible layers)
     rotateObject(objectId, center, angle) {
         const cos = Math.cos(angle);
         const sin = Math.sin(angle);
-        this.lines.forEach(line => {
+        this.getAllVisibleLines().forEach(line => {
             if (line.objectId === objectId) {
                 line.points.forEach(p => {
                     const dx = p.x - center.x;
@@ -1071,9 +1121,16 @@ class Glassboard {
         this.redraw();
     }
 
-    // Delete all strokes of an object
+    // Delete all strokes of an object (searches all visible layers)
     deleteObject(objectId) {
-        this.lines = this.lines.filter(line => line.objectId !== objectId);
+        const note = this.notes[this.currentNoteIndex];
+        if (note && note.layers) {
+            note.layers.forEach(layer => {
+                if (layer.visible) {
+                    layer.lines = layer.lines.filter(line => line.objectId !== objectId);
+                }
+            });
+        }
         if (this.selectedObjectId === objectId) {
             this.selectedObjectId = null;
         }
@@ -1081,12 +1138,12 @@ class Glassboard {
         this.saveState();
     }
 
-    // Select all objects within a rectangle
+    // Select all objects within a rectangle (searches all visible layers)
     selectObjectsInRect(rect) {
         const selectedIds = new Set();
 
         // Find all objects with points inside the rectangle
-        this.lines.forEach(line => {
+        this.getAllVisibleLines().forEach(line => {
             for (const p of line.points) {
                 if (p.x >= rect.x && p.x <= rect.x + rect.width &&
                     p.y >= rect.y && p.y <= rect.y + rect.height) {
@@ -1201,9 +1258,9 @@ class Glassboard {
         this.saveState();
     }
 
-    // Change color of all strokes in an object
+    // Change color of all strokes in an object (searches all visible layers)
     changeObjectColor(objectId, color) {
-        this.lines.forEach(line => {
+        this.getAllVisibleLines().forEach(line => {
             if (line.objectId === objectId) {
                 line.color = color;
             }
@@ -1212,9 +1269,9 @@ class Glassboard {
         this.saveState();
     }
 
-    // Change stroke width of all strokes in an object
+    // Change stroke width of all strokes in an object (searches all visible layers)
     changeObjectWidth(objectId, width) {
-        this.lines.forEach(line => {
+        this.getAllVisibleLines().forEach(line => {
             if (line.objectId === objectId) {
                 line.width = width;
             }
@@ -1239,9 +1296,9 @@ class Glassboard {
         }
     }
 
-    // Copy selected object to clipboard
+    // Copy selected object to clipboard (searches all visible layers)
     copyObject(objectId) {
-        const objectLines = this.lines.filter(line => line.objectId === objectId);
+        const objectLines = this.getAllVisibleLines().filter(line => line.objectId === objectId);
         if (objectLines.length === 0) return;
 
         // Deep copy the lines
@@ -2247,10 +2304,16 @@ class Glassboard {
         // Draw center origin dot (2x2px, zoom-independent)
         this.drawCenterDot();
 
-        // Draw all saved lines
-        this.lines.forEach(line => this.drawLine(line));
+        // Draw all visible layers in order (index 0 = bottom)
+        const note = this.notes[this.currentNoteIndex];
+        if (note && note.layers) {
+            note.layers.forEach(layer => {
+                if (!layer.visible) return;
+                layer.lines.forEach(line => this.drawLine(line));
+            });
+        }
 
-        // Draw current line
+        // Draw current line (always on top during active drawing)
         if (this.currentLine) {
             this.drawLine(this.currentLine);
         }
@@ -2446,9 +2509,9 @@ class Glassboard {
         this.ctx.stroke();
     }
 
-    // Draw selection highlight for a specific object (used for multi-select)
+    // Draw selection highlight for a specific object (used for multi-select, searches all visible layers)
     drawSelectionHighlightForObject(objectId) {
-        const selectedLines = this.lines.filter(l => l.objectId === objectId);
+        const selectedLines = this.getAllVisibleLines().filter(l => l.objectId === objectId);
         if (selectedLines.length === 0) return;
 
         let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
@@ -3447,8 +3510,8 @@ class Glassboard {
             // Fill with transparent background
             exportCtx.clearRect(0, 0, exportCanvas.width, exportCanvas.height);
 
-            // Draw all lines from current note
-            this.lines.forEach(line => {
+            // Draw all lines from all visible layers
+            this.getAllVisibleLines().forEach(line => {
                 if (line.points.length < 2) return;
                 exportCtx.beginPath();
                 exportCtx.strokeStyle = line.color;
@@ -3651,45 +3714,54 @@ class Glassboard {
 
     // Select all items
     selectAll() {
-        // Select all drawn objects (by selecting the most recent object group)
-        const objectIds = [...new Set(this.lines.map(l => l.objectId))];
+        // Select all drawn objects across all visible layers
+        const objectIds = [...new Set(this.getAllVisibleLines().map(l => l.objectId))];
         this.selectedObjects = objectIds;
 
-        // Select all text items
-        this.textItems.forEach(item => {
-            const element = this.textContainer.querySelector(`[data-id="${item.id}"]`);
-            if (element) {
-                element.classList.add('selected');
-            }
-        });
-
-        // Select all images
-        this.images.forEach(img => {
-            const element = this.textContainer.querySelector(`.pasted-image[data-id="${img.id}"]`);
-            if (element) {
-                element.classList.add('selected');
-            }
-        });
+        // Select all text items from all visible layers
+        const note = this.notes[this.currentNoteIndex];
+        if (note && note.layers) {
+            note.layers.forEach(layer => {
+                if (!layer.visible) return;
+                layer.textItems.forEach(item => {
+                    const element = this.textContainer.querySelector(`[data-id="${item.id}"]`);
+                    if (element) {
+                        element.classList.add('selected');
+                    }
+                });
+                layer.images.forEach(img => {
+                    const element = this.textContainer.querySelector(`.pasted-image[data-id="${img.id}"]`);
+                    if (element) {
+                        element.classList.add('selected');
+                    }
+                });
+            });
+        }
 
         this.allSelected = true;
         // Redraw to show selection highlights on drawn objects
         this.redraw();
     }
 
-    // Delete all selected items
+    // Delete all selected items (clears all visible layers)
     deleteAllSelected() {
         if (!this.allSelected) return;
 
-        // Delete all lines
-        this.lines = [];
+        // Delete all lines from all visible layers
+        const note = this.notes[this.currentNoteIndex];
+        if (note && note.layers) {
+            note.layers.forEach(layer => {
+                if (layer.visible) {
+                    layer.lines = [];
+                    layer.textItems = [];
+                    layer.images = [];
+                }
+            });
+        }
 
-        // Delete all text items
+        // Remove DOM elements
         this.textContainer.querySelectorAll('.text-item').forEach(el => el.remove());
-        this.textItems = [];
-
-        // Delete all images
         this.textContainer.querySelectorAll('.pasted-image').forEach(el => el.remove());
-        this.images = [];
 
         this.allSelected = false;
         this.selectedObjectId = null;
