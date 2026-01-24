@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-01-22)
 ## Current Position
 
 Phase: 5 of 5 (Layers and Layer Management)
-Plan: 1 of 2 in current phase
-Status: In progress
-Last activity: 2026-01-24 -- Completed 05-01-PLAN.md (layer data model)
+Plan: 2 of 2 in current phase
+Status: Phase complete (all phases complete)
+Last activity: 2026-01-24 -- Completed 05-02-PLAN.md (layer panel UI)
 
-Progress: [█████████░] 90%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 10
-- Average duration: ~2.6 min
-- Total execution time: ~27 min
+- Total plans completed: 11
+- Average duration: ~2.7 min
+- Total execution time: ~30 min
 
 **By Phase:**
 
@@ -31,11 +31,11 @@ Progress: [█████████░] 90%
 | 2 | 3 | ~14 min | ~4.7 min |
 | 3 | 2 | ~1.5 min | ~0.75 min |
 | 4 | 2 | ~2.5 min | ~1.25 min |
-| 5 | 1 | ~5 min | ~5 min |
+| 5 | 2 | ~8 min | ~4 min |
 
 **Recent Trend:**
-- Last 5 plans: 04-01, 04-02, 03-01, 03-02, 05-01 (all complete)
-- Trend: Stable
+- Last 5 plans: 03-01, 03-02, 04-01, 04-02, 05-01, 05-02 (all complete)
+- Trend: Stable - all phases complete
 
 *Updated after each plan completion*
 
@@ -66,6 +66,9 @@ Recent decisions affecting current work:
 - [05-01]: Migration deletes flat properties after moving to layer object
 - [05-01]: Cross-layer selection auto-switches activeLayerId
 - [05-01]: Shape fill-area hit testing works in all modes (bug fix)
+- [05-02]: Select-all and clear scoped to active layer only
+- [05-02]: Layer panel and settings panel are mutually exclusive
+- [05-02]: Soft limit warning at 10 layers (no hard block)
 
 ### Pending Todos
 
@@ -92,5 +95,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-01-24
-Stopped at: Completed 05-01-PLAN.md (layer data model and cross-layer rendering)
+Stopped at: Completed 05-02-PLAN.md (layer panel UI) - ALL PHASES COMPLETE
 Resume file: None
