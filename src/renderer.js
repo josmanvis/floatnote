@@ -2557,11 +2557,19 @@ class Glassboard {
     }
 
     clear() {
-        this.lines = [];
+        const activeLayer = this.getActiveLayer();
+        if (!activeLayer) return;
+
+        // Clear only the active layer's content
+        activeLayer.lines = [];
+        activeLayer.textItems = [];
+        activeLayer.images = [];
         this.currentLine = null;
-        this.textItems = [];
-        this.images = [];
-        this.textContainer.innerHTML = '';
+
+        // Remove DOM elements belonging to this layer
+        this.textContainer.querySelectorAll(`[data-layer-id="${activeLayer.id}"]`).forEach(el => el.remove());
+
+        this.saveState();
         this.redraw();
     }
 
@@ -3229,6 +3237,14 @@ class Glassboard {
     }
 
     showSettings() {
+        // Close layer panel if open
+        if (this.layerPanelVisible) {
+            this.layerPanelVisible = false;
+            const panel = document.getElementById('layer-panel');
+            if (panel) panel.classList.remove('visible');
+            const toggleBtn = document.getElementById('layer-toggle');
+            if (toggleBtn) toggleBtn.classList.remove('active');
+        }
         this.settingsPanel.classList.add('visible');
     }
 
@@ -4021,54 +4037,46 @@ class Glassboard {
 
     // Select all items
     selectAll() {
-        // Select all drawn objects across all visible layers
-        const objectIds = [...new Set(this.getAllVisibleLines().map(l => l.objectId))];
+        // Select all drawn objects on the ACTIVE LAYER only
+        const activeLayer = this.getActiveLayer();
+        if (!activeLayer) return;
+
+        const objectIds = [...new Set(activeLayer.lines.map(l => l.objectId))];
         this.selectedObjects = objectIds;
 
-        // Select all text items from all visible layers
-        const note = this.notes[this.currentNoteIndex];
-        if (note && note.layers) {
-            note.layers.forEach(layer => {
-                if (!layer.visible) return;
-                layer.textItems.forEach(item => {
-                    const element = this.textContainer.querySelector(`[data-id="${item.id}"]`);
-                    if (element) {
-                        element.classList.add('selected');
-                    }
-                });
-                layer.images.forEach(img => {
-                    const element = this.textContainer.querySelector(`.pasted-image[data-id="${img.id}"]`);
-                    if (element) {
-                        element.classList.add('selected');
-                    }
-                });
-            });
-        }
+        // Select all text items and images on the active layer
+        activeLayer.textItems.forEach(item => {
+            const element = this.textContainer.querySelector(`[data-id="${item.id}"]`);
+            if (element) {
+                element.classList.add('selected');
+            }
+        });
+        activeLayer.images.forEach(img => {
+            const element = this.textContainer.querySelector(`.pasted-image[data-id="${img.id}"]`);
+            if (element) {
+                element.classList.add('selected');
+            }
+        });
 
         this.allSelected = true;
         // Redraw to show selection highlights on drawn objects
         this.redraw();
     }
 
-    // Delete all selected items (clears all visible layers)
+    // Delete all selected items (clears active layer)
     deleteAllSelected() {
         if (!this.allSelected) return;
 
-        // Delete all lines from all visible layers
-        const note = this.notes[this.currentNoteIndex];
-        if (note && note.layers) {
-            note.layers.forEach(layer => {
-                if (layer.visible) {
-                    layer.lines = [];
-                    layer.textItems = [];
-                    layer.images = [];
-                }
-            });
-        }
+        const activeLayer = this.getActiveLayer();
+        if (!activeLayer) return;
 
-        // Remove DOM elements
-        this.textContainer.querySelectorAll('.text-item').forEach(el => el.remove());
-        this.textContainer.querySelectorAll('.pasted-image').forEach(el => el.remove());
+        // Clear active layer content
+        activeLayer.lines = [];
+        activeLayer.textItems = [];
+        activeLayer.images = [];
+
+        // Remove DOM elements belonging to this layer
+        this.textContainer.querySelectorAll(`[data-layer-id="${activeLayer.id}"]`).forEach(el => el.remove());
 
         this.allSelected = false;
         this.selectedObjectId = null;
