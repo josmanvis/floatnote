@@ -27,12 +27,15 @@ A persistent, transparent scratch space that's always one keyboard shortcut away
 - ✓ Undo/redo history — existing
 - ✓ Object selection and manipulation (move, resize, delete) — existing
 - ✓ CLI launcher with auto-update from GitHub Releases — existing
-
-### Active
-
-- [ ] Core flow test coverage (drawing, text, notes, save/load)
-- [ ] GitHub Actions CI/CD pipeline (build DMG on release)
-- [ ] npm publish (make `npx floatnote` discoverable)
+- ✓ Shape drawing (rectangle, circle, triangle, line) with toolbar dropdown — v1.0
+- ✓ Interactive shapes (select, resize, rotate) — v1.0
+- ✓ Layer system (create, rename, delete, visibility, lock, reorder) — v1.0
+- ✓ Integration tests for IPC contracts — v1.0
+- ✓ E2E tests with Playwright for core user flows — v1.0
+- ✓ GitHub Actions CI/CD (test on push, build+release on tag) — v1.0
+- ✓ npm publishing (`npx floatnote`) — v1.0
+- ✓ Docusaurus website on GitHub Pages — v1.0
+- ✓ Menubar icon dark mode support — v1.0
 
 ### Out of Scope
 
@@ -43,11 +46,12 @@ A persistent, transparent scratch space that's always one keyboard shortcut away
 
 ## Context
 
-- Existing test suite covers basic unit tests but lacks coverage on core renderer logic (drawing, selection, transforms)
-- electron-builder already configured for macOS DMG/ZIP builds
-- CLI (`bin/floatnote.js`) already handles download and launch from GitHub Releases
-- package.json has `bin` field pointing to CLI, ready for npm publish
-- Publisher configured as `josmanvis/floatnote` in package.json build config
+- Full test suite: unit tests, integration tests (IPC contracts), E2E tests (Playwright + Electron)
+- electron-builder configured for macOS DMG/ZIP builds (x64 + arm64)
+- CLI (`bin/floatnote.js`) handles download and launch from GitHub Releases
+- GitHub Actions: test workflow (push/PR), release workflow (tag → build → publish)
+- npm package ships only bin/ (~5KB), app downloaded from GitHub Releases
+- Layer system integrated into note data model with backward-compatible migration
 
 ## Constraints
 
@@ -59,9 +63,12 @@ A persistent, transparent scratch space that's always one keyboard shortcut away
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| Test core flows only (not comprehensive) | Ship fast, cover what matters | — Pending |
-| Full CI/CD pipeline (Actions + npm) | Reproducible builds, easy updates | — Pending |
-| CLI downloads from Releases (not bundled) | Keep npm package small, app is ~100MB+ | — Pending |
+| Jest 29 for integration, Playwright+Electron for E2E | Fast unit tests + real app verification | Complete |
+| Skip code signing in CI | Defer to v2, unblocks releases now | Complete |
+| npm ships only bin/ (~5KB CLI) | Keep npm package small, app is ~100MB+ | Complete |
+| Layer data at note level with activeLayerId | Simple delegation, backward-compatible | Complete |
+| Cross-layer selection auto-switches active layer | Intuitive UX, no manual layer switching needed | Complete |
+| Explicit electron entry path (not main field) | Prevents src/ leaking into npm tarball | Complete |
 
 ---
-*Last updated: 2026-01-22 after initialization*
+*Last updated: 2026-01-24 after v1.0 milestone completion*

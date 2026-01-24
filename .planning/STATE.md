@@ -2,73 +2,40 @@
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-01-22)
+See: .planning/PROJECT.md (updated 2026-01-24)
 
 **Core value:** A persistent, transparent scratch space that's always one keyboard shortcut away
-**Current focus:** All phases complete
+**Current focus:** Between milestones — v1.0 complete
 
 ## Current Position
 
-Phase: 5 of 5 (Layers and Layer Management)
-Plan: 2 of 2 in current phase
-Status: Phase complete (all phases complete)
-Last activity: 2026-01-24 -- Completed 05-02-PLAN.md (layer panel UI)
+Milestone: v1.0 complete (archived)
+Status: Ready for next milestone
+Last activity: 2026-01-24 -- Milestone v1.0 archived
 
-Progress: [██████████] 100%
+Progress: [██████████] 100% (v1.0)
 
 ## Performance Metrics
 
-**Velocity:**
+**v1.0 Velocity:**
 - Total plans completed: 11
-- Average duration: ~2.7 min
+- Quick tasks: 7
+- Average plan duration: ~2.7 min
 - Total execution time: ~30 min
-
-**By Phase:**
-
-| Phase | Plans | Total | Avg/Plan |
-|-------|-------|-------|----------|
-| 1 | 2 | ~4 min | ~2 min |
-| 2 | 3 | ~14 min | ~4.7 min |
-| 3 | 2 | ~1.5 min | ~0.75 min |
-| 4 | 2 | ~2.5 min | ~1.25 min |
-| 5 | 2 | ~8 min | ~4 min |
-
-**Recent Trend:**
-- Last 5 plans: 03-01, 03-02, 04-01, 04-02, 05-01, 05-02 (all complete)
-- Trend: Stable - all phases complete
-
-*Updated after each plan completion*
+- Timeline: 8 days (2026-01-15 → 2026-01-23)
 
 ## Accumulated Context
 
 ### Decisions
 
-Decisions are logged in PROJECT.md Key Decisions table.
-Recent decisions affecting current work:
+All v1.0 decisions archived in milestones/v1.0-ROADMAP.md.
+Key architectural decisions carried forward:
 
-- [Roadmap]: Use Jest 29 (existing) for integration tests, Playwright+Electron for E2E
-- [Roadmap]: Don't restructure existing tests -- add integration/E2E alongside
-- [Roadmap]: Skip code signing in CI (CSC_IDENTITY_AUTO_DISCOVERY=false), defer to v2
-- [Roadmap]: npm package ships only bin/ (~5KB CLI), app downloaded from GitHub Releases
-- [04-01]: Explicit electron entry path replaces main field (main field caused src/ to leak into tarball)
-- [04-02]: Trigger on release published events (not drafts), ubuntu-latest for bin-only package
-- [03-02]: merge-multiple: true flattens artifacts; job-level permissions for least-privilege
-- [02-01]: Skip close dialog in test mode for reliable E2E teardown
-- [02-01]: Use page.evaluate() for toolbar actions (hover-dependent UI)
-- [02-01]: Removed electron-playwright-helpers (unused after dialog fix)
-- [02-02]: Use electronApp.evaluate for clipboard writes (main process context)
-- [02-02]: Generate PNG programmatically for nativeImage (no external tools)
-- [02-02]: Use waitForFunction for async data model assertions
-- [02-03]: Restart tests manage own Electron lifecycle (no shared fixture)
-- [02-03]: Use page.evaluate for text creation (canvas overlay blocks text-container clicks)
-- [02-03]: Use dispatchEvent for settings changes to trigger save handlers
-- [05-01]: Layers array stored at note level with activeLayerId reference
-- [05-01]: Migration deletes flat properties after moving to layer object
-- [05-01]: Cross-layer selection auto-switches activeLayerId
-- [05-01]: Shape fill-area hit testing works in all modes (bug fix)
-- [05-02]: Select-all and clear scoped to active layer only
-- [05-02]: Layer panel and settings panel are mutually exclusive
-- [05-02]: Soft limit warning at 10 layers (no hard block)
+- Layer data model at note level with activeLayerId reference
+- Cross-layer selection auto-switches active layer
+- npm ships only bin/ (~5KB CLI), app from GitHub Releases
+- Jest for integration, Playwright+Electron for E2E
+- Skip code signing (deferred)
 
 ### Pending Todos
 
@@ -76,9 +43,7 @@ None.
 
 ### Blockers/Concerns
 
-- E2E tests note: toolbar buttons require hover to be clickable; use page.evaluate() or force:true
-- Clipboard test note: nativeImage.createFromBuffer requires properly encoded PNG (some base64 PNGs produce empty images)
-- Persistence note: restoreTextItem duplicates textItems array entries on load (existing app behavior)
+None.
 
 ### Quick Tasks Completed
 
@@ -95,5 +60,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-01-24
-Stopped at: Completed 05-02-PLAN.md (layer panel UI) - ALL PHASES COMPLETE
+Stopped at: Milestone v1.0 archived
 Resume file: None
