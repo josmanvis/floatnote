@@ -74,6 +74,14 @@
                         <path d="M7 11V7a5 5 0 0110 0v4"/>
                     </svg>
                 </button>
+
+                <button id="layer-toggle" class="tool-btn" title="Layers (L)">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polygon points="12 2 2 7 12 12 22 7 12 2"/>
+                        <polyline points="2 17 12 22 22 17"/>
+                        <polyline points="2 12 12 17 22 12"/>
+                    </svg>
+                </button>
             </div>
 
             <!-- Main toolbar (right) -->
@@ -543,8 +551,26 @@
                             <div class="shortcut-item">
                                 <span>Large size</span><kbd>3</kbd>
                             </div>
+                            <div class="shortcut-item">
+                                <span>Layers panel</span><kbd>L</kbd>
+                            </div>
                         </div>
                     </div>
+                </div>
+            </div>
+
+            <!-- Layer panel -->
+            <div id="layer-panel" class="layer-panel">
+                <div class="layer-panel-header">
+                    <span class="layer-panel-title">Layers</span>
+                    <button id="add-layer-btn" class="layer-action-btn" title="Add layer">
+                        <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+                            <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+                        </svg>
+                    </button>
+                </div>
+                <div class="layer-list" id="layer-list">
+                    <!-- Layer items rendered dynamically by updateLayerPanel() -->
                 </div>
             </div>
         </div>
