@@ -16,6 +16,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 2: E2E Tests** - Core user flows verified in real Electron app via Playwright
 - [x] **Phase 3: CI/CD Pipeline** - Automated testing, building, and releasing on GitHub Actions
 - [x] **Phase 4: npm Publishing** - CLI-only package published to npm, downloads app from Releases
+- [ ] **Phase 5: Layers and Layer Management** - Modern minimal layer system for organizing drawing elements
 
 ## Phase Details
 
@@ -83,10 +84,28 @@ Plans:
 - [x] 04-01-PLAN.md -- Package.json configuration (files field, prepublishOnly, dry-run verification)
 - [x] 04-02-PLAN.md -- Release workflow npm publish step and npm token configuration
 
+### Phase 5: Layers and Layer Management
+**Goal**: Modern, minimal layer system allowing users to organize shapes, drawings, and text into layers with visibility, reordering, and grouping
+**Depends on**: Phase 4 (complete)
+**Requirements**: User-requested feature — shapes, lines, text, and images assignable to layers; layers reorderable, toggleable, lockable
+**Success Criteria** (what must be TRUE):
+  1. Users can create, rename, and delete layers from a minimal layer panel
+  2. New drawings/shapes/text are added to the currently active layer
+  3. Layers can be reordered (drag or up/down controls), with rendering order matching layer order
+  4. Individual layers can be hidden/shown (toggle visibility)
+  5. Individual layers can be locked (prevents editing elements on that layer)
+  6. Layer state persists across app restarts (saved with note data)
+  7. Layer system works with existing undo/redo
+**Plans:** 2 plans
+
+Plans:
+- [ ] 05-01-PLAN.md -- Layer data model, migration, getters, undo/redo, multi-layer rendering, shape selection fix
+- [ ] 05-02-PLAN.md -- Layer panel UI (HTML/CSS/JS), all layer operations, keyboard shortcut, integration polish
+
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 -> 2 -> 3 -> 4
+Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
@@ -94,3 +113,4 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4
 | 2. E2E Tests | 3/3 | Complete | 2026-01-23 |
 | 3. CI/CD Pipeline | 2/2 | Complete | 2026-01-23 |
 | 4. npm Publishing | 2/2 | Complete | 2026-01-23 |
+| 5. Layers and Layer Management | 0/? | Planning | — |
