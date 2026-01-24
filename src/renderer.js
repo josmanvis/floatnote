@@ -144,32 +144,29 @@ class Glassboard {
         this.setupWindowToggleHandler();
     }
 
-    // Note management - getters for current note's data
+    // Note management - getters for current note's data (delegated to active layer)
     get lines() {
-        return this.notes[this.currentNoteIndex]?.lines || [];
+        return this.getActiveLayer()?.lines || [];
     }
     set lines(value) {
-        if (this.notes[this.currentNoteIndex]) {
-            this.notes[this.currentNoteIndex].lines = value;
-        }
+        const layer = this.getActiveLayer();
+        if (layer) layer.lines = value;
     }
 
     get textItems() {
-        return this.notes[this.currentNoteIndex]?.textItems || [];
+        return this.getActiveLayer()?.textItems || [];
     }
     set textItems(value) {
-        if (this.notes[this.currentNoteIndex]) {
-            this.notes[this.currentNoteIndex].textItems = value;
-        }
+        const layer = this.getActiveLayer();
+        if (layer) layer.textItems = value;
     }
 
     get images() {
-        return this.notes[this.currentNoteIndex]?.images || [];
+        return this.getActiveLayer()?.images || [];
     }
     set images(value) {
-        if (this.notes[this.currentNoteIndex]) {
-            this.notes[this.currentNoteIndex].images = value;
-        }
+        const layer = this.getActiveLayer();
+        if (layer) layer.images = value;
     }
 
     get attachments() {
@@ -181,15 +178,55 @@ class Glassboard {
         }
     }
 
+    // Layer management methods
+    migrateNoteToLayers(note) {
+        if (note.layers) return note;
+        const layerId = 'layer-' + (note.id || Date.now());
+        const defaultLayer = {
+            id: layerId,
+            name: 'Layer 1',
+            visible: true,
+            locked: false,
+            lines: note.lines || [],
+            textItems: note.textItems || [],
+            images: note.images || []
+        };
+        note.layers = [defaultLayer];
+        note.activeLayerId = layerId;
+        delete note.lines;
+        delete note.textItems;
+        delete note.images;
+        return note;
+    }
+
+    getActiveLayer() {
+        const note = this.notes[this.currentNoteIndex];
+        if (!note || !note.layers) return null;
+        const layer = note.layers.find(l => l.id === note.activeLayerId);
+        return layer || note.layers[0] || null;
+    }
+
+    isActiveLayerLocked() {
+        return this.getActiveLayer()?.locked || false;
+    }
+
     createEmptyNote() {
         // Get viewport dimensions for origin calculation
         const rect = this.canvas?.getBoundingClientRect() || { width: 800, height: 600 };
         const zoom = this.zoomLevel || 1;
+        const layerId = 'layer-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
         return {
             id: Date.now().toString(),
-            lines: [],
-            textItems: [],
-            images: [],
+            layers: [{
+                id: layerId,
+                name: 'Layer 1',
+                visible: true,
+                locked: false,
+                lines: [],
+                textItems: [],
+                images: []
+            }],
+            activeLayerId: layerId,
             attachments: [],
             // Store the origin point in content-space (center of viewport when note was created)
             originX: (rect.width / 2) / zoom,
@@ -242,15 +279,15 @@ class Glassboard {
         const note = this.notes[this.currentNoteIndex];
         if (!note) return;
 
-        // Restore text items
-        note.textItems.forEach(item => {
-            this.restoreTextItem(item);
-        });
-
-        // Restore images
-        note.images.forEach(img => {
-            this.restoreImage(img);
-        });
+        // Restore text items and images from all visible layers
+        if (note.layers) {
+            note.layers.forEach(layer => {
+                if (layer.visible) {
+                    layer.textItems.forEach(item => this.restoreTextItem(item, layer.id));
+                    layer.images.forEach(img => this.restoreImage(img, layer.id));
+                }
+            });
+        }
 
         // Redraw canvas with lines
         this.redraw();
@@ -543,6 +580,7 @@ class Glassboard {
 
         const startDrawing = (e) => {
             if (this.isTextMode) return;
+            if (this.isActiveLayerLocked()) return;
 
             const point = getPoint(e);
 
@@ -1432,6 +1470,7 @@ class Glassboard {
     setupTextMode() {
         this.textContainer.addEventListener('click', (e) => {
             if (!this.isTextMode) return;
+            if (this.isActiveLayerLocked()) return;
             if (e.target !== this.textContainer) return;
 
             const rect = this.textContainer.getBoundingClientRect();
@@ -1455,6 +1494,7 @@ class Glassboard {
         const item = document.createElement('div');
         item.className = 'text-item selected';
         item.dataset.id = id;
+        item.dataset.layerId = this.getActiveLayer()?.id || '';
         item.style.left = x + 'px';
         item.style.top = y + 'px';
         item.style.color = this.currentColor;
@@ -2774,6 +2814,7 @@ class Glassboard {
         const imageItem = document.createElement('div');
         imageItem.className = 'pasted-image';
         imageItem.dataset.id = id;
+        imageItem.dataset.layerId = this.getActiveLayer()?.id || '';
         imageItem.style.left = (x / this.zoomLevel) + 'px';
         imageItem.style.top = (y / this.zoomLevel) + 'px';
         imageItem.style.width = displayWidth + 'px';
@@ -2916,6 +2957,7 @@ class Glassboard {
         const item = document.createElement('div');
         item.className = 'text-item';
         item.dataset.id = id;
+        item.dataset.layerId = this.getActiveLayer()?.id || '';
         item.style.left = (x / this.zoomLevel) + 'px';
         item.style.top = (y / this.zoomLevel) + 'px';
         item.style.color = this.currentColor;
@@ -3186,11 +3228,12 @@ class Glassboard {
     saveState() {
         if (this.isUndoRedoAction) return;
 
-        // Create a snapshot of current state
+        // Create a snapshot of current state (full layers array)
+        const note = this.notes[this.currentNoteIndex];
+        if (!note || !note.layers) return;
         const state = {
-            lines: JSON.parse(JSON.stringify(this.lines)),
-            textItems: this.textItems.map(t => ({ ...t })),
-            images: this.images.map(i => ({ ...i }))
+            layers: JSON.parse(JSON.stringify(note.layers)),
+            activeLayerId: note.activeLayerId
         };
 
         // Remove any states after current index (new branch)
@@ -3231,30 +3274,33 @@ class Glassboard {
     }
 
     restoreState(state) {
-        // Restore lines
-        this.lines = JSON.parse(JSON.stringify(state.lines));
+        const note = this.notes[this.currentNoteIndex];
+        if (!note) return;
 
-        // Clear and restore text items
+        // Restore full layers state
+        note.layers = JSON.parse(JSON.stringify(state.layers));
+        note.activeLayerId = state.activeLayerId;
+
+        // Clear all text items and images from DOM
         this.textContainer.querySelectorAll('.text-item').forEach(el => el.remove());
-        this.textItems = [];
-        state.textItems.forEach(item => {
-            this.restoreTextItem(item);
-        });
-
-        // Clear and restore images
         this.textContainer.querySelectorAll('.pasted-image').forEach(el => el.remove());
-        this.images = [];
-        state.images.forEach(img => {
-            this.restoreImage(img);
+
+        // Restore text items and images from ALL layers
+        note.layers.forEach(layer => {
+            if (layer.visible) {
+                layer.textItems.forEach(item => this.restoreTextItem(item, layer.id));
+                layer.images.forEach(img => this.restoreImage(img, layer.id));
+            }
         });
 
         this.redraw();
     }
 
-    restoreTextItem(item) {
+    restoreTextItem(item, layerId) {
         const element = document.createElement('div');
         element.className = 'text-item';
         element.dataset.id = item.id;
+        element.dataset.layerId = layerId || '';
         element.style.left = item.x + 'px';
         element.style.top = item.y + 'px';
         element.style.color = item.color;
@@ -3299,10 +3345,11 @@ class Glassboard {
         this.setupPastedTextItem(element, item.id, editor, formatBar);
     }
 
-    restoreImage(img) {
+    restoreImage(img, layerId) {
         const imageItem = document.createElement('div');
         imageItem.className = 'pasted-image';
         imageItem.dataset.id = img.id;
+        imageItem.dataset.layerId = layerId || '';
         imageItem.style.left = img.x + 'px';
         imageItem.style.top = img.y + 'px';
         imageItem.style.width = img.width + 'px';
@@ -3335,6 +3382,7 @@ class Glassboard {
 
     // Smart paste - checks system clipboard first, then internal clipboard
     smartPaste() {
+        if (this.isActiveLayerLocked()) return;
         // Check system clipboard first
         this.checkSystemClipboard();
 
@@ -3515,7 +3563,7 @@ class Glassboard {
                 if (this.settings.openWithCleanSlate) {
                     // Keep the notes but create/go to a new blank note
                     if (data.notes && data.notes.length > 0) {
-                        this.notes = data.notes;
+                        this.notes = data.notes.map(n => this.migrateNoteToLayers(n));
                         this.notes.push(this.createEmptyNote());
                         this.currentNoteIndex = this.notes.length - 1;
                     }
@@ -3527,7 +3575,7 @@ class Glassboard {
 
                 // Restore notes (new multi-note format)
                 if (data.notes && data.notes.length > 0) {
-                    this.notes = data.notes;
+                    this.notes = data.notes.map(n => this.migrateNoteToLayers(n));
                     this.currentNoteIndex = data.currentNoteIndex || 0;
 
                     // Make sure index is valid
@@ -3541,14 +3589,15 @@ class Glassboard {
                 // Legacy format support (single note)
                 else if (data.lines || data.textItems || data.images) {
                     // Migrate old format to new format
-                    this.notes = [{
+                    const legacyNote = {
                         id: Date.now().toString(),
                         lines: data.lines || [],
                         textItems: data.textItems || [],
                         images: data.images || [],
                         createdAt: Date.now(),
                         lastModified: Date.now()
-                    }];
+                    };
+                    this.notes = [this.migrateNoteToLayers(legacyNote)];
                     this.currentNoteIndex = 0;
                     this.loadCurrentNote();
                 }
