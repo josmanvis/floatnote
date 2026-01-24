@@ -107,6 +107,9 @@ class Glassboard {
         // Double command key tracking
         this.lastRightCommandTime = 0;
 
+        // Layer panel state
+        this.layerPanelVisible = false;
+
         this.init();
     }
 
@@ -139,6 +142,9 @@ class Glassboard {
 
         // Setup pagination controls
         this.setupPagination();
+
+        // Setup layer panel
+        this.setupLayerPanel();
 
         // Setup window toggle handler for clean slate
         this.setupWindowToggleHandler();
@@ -312,6 +318,10 @@ class Glassboard {
         const note = this.notes[this.currentNoteIndex];
         if (!note) return;
 
+        // Blur any active layer name editing
+        const editingName = document.querySelector('.layer-name.editing');
+        if (editingName) editingName.blur();
+
         // Restore text items and images from all visible layers
         if (note.layers) {
             note.layers.forEach(layer => {
@@ -324,6 +334,9 @@ class Glassboard {
 
         // Redraw canvas with lines
         this.redraw();
+
+        // Update layer panel for new note
+        this.updateLayerPanel();
 
         // Reset history for this note
         this.history = [];
@@ -2013,6 +2026,10 @@ class Glassboard {
                 }
                 if (e.key === 'f' || e.key === 'F') {
                     this.toggleFreeze();
+                    return;
+                }
+                if (e.key === 'l' || e.key === 'L') {
+                    this.toggleLayerPanel();
                     return;
                 }
                 // Size shortcuts: Cmd+1=sm, Cmd+2=md, Cmd+3=lg
@@ -3710,6 +3727,296 @@ class Glassboard {
         document.addEventListener('mouseup', () => {
             isResizing = false;
         });
+    }
+
+    // Layer panel methods
+    setupLayerPanel() {
+        const toggleBtn = document.getElementById('layer-toggle');
+        const addBtn = document.getElementById('add-layer-btn');
+
+        if (toggleBtn) {
+            toggleBtn.addEventListener('click', () => this.toggleLayerPanel());
+        }
+
+        if (addBtn) {
+            addBtn.addEventListener('click', () => this.createLayer());
+        }
+
+        // Initial render
+        this.updateLayerPanel();
+    }
+
+    toggleLayerPanel() {
+        this.layerPanelVisible = !this.layerPanelVisible;
+        const panel = document.getElementById('layer-panel');
+        if (panel) {
+            panel.classList.toggle('visible', this.layerPanelVisible);
+        }
+        const toggleBtn = document.getElementById('layer-toggle');
+        if (toggleBtn) {
+            toggleBtn.classList.toggle('active', this.layerPanelVisible);
+        }
+        // Close settings panel if open
+        if (this.layerPanelVisible && this.settingsPanel && this.settingsPanel.classList.contains('visible')) {
+            this.hideSettings();
+        }
+    }
+
+    createLayer(name) {
+        const note = this.notes[this.currentNoteIndex];
+        if (!note || !note.layers) return;
+
+        if (note.layers.length >= 10) {
+            console.warn('Layer count exceeds recommended limit of 10. Performance may degrade.');
+        }
+
+        const newLayer = {
+            id: 'layer-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9),
+            name: name || 'Layer ' + (note.layers.length + 1),
+            visible: true,
+            locked: false,
+            lines: [],
+            textItems: [],
+            images: []
+        };
+        note.layers.push(newLayer);
+        note.activeLayerId = newLayer.id;
+        this.saveState();
+        this.updateLayerPanel();
+        this.redraw();
+    }
+
+    deleteLayer(layerId) {
+        const note = this.notes[this.currentNoteIndex];
+        if (!note || !note.layers) return;
+        if (note.layers.length <= 1) return; // Don't delete last layer
+
+        const index = note.layers.findIndex(l => l.id === layerId);
+        if (index === -1) return;
+
+        // Remove DOM elements belonging to this layer
+        this.textContainer.querySelectorAll(`[data-layer-id="${layerId}"]`).forEach(el => el.remove());
+
+        note.layers.splice(index, 1);
+
+        // If deleted layer was active, switch to first remaining layer
+        if (note.activeLayerId === layerId) {
+            note.activeLayerId = note.layers[0].id;
+        }
+
+        this.saveState();
+        this.updateLayerPanel();
+        this.redraw();
+    }
+
+    renameLayer(layerId, newName) {
+        const note = this.notes[this.currentNoteIndex];
+        if (!note || !note.layers) return;
+        const layer = note.layers.find(l => l.id === layerId);
+        if (!layer) return;
+        const trimmed = newName.trim();
+        if (trimmed) {
+            layer.name = trimmed;
+        }
+        this.autoSave();
+    }
+
+    moveLayerUp(layerId) {
+        const note = this.notes[this.currentNoteIndex];
+        if (!note || !note.layers) return;
+        const index = note.layers.findIndex(l => l.id === layerId);
+        if (index === -1 || index >= note.layers.length - 1) return; // Already at top
+        // Swap with next element (higher in array = rendered on top)
+        const temp = note.layers[index];
+        note.layers[index] = note.layers[index + 1];
+        note.layers[index + 1] = temp;
+        this.saveState();
+        this.updateLayerPanel();
+        this.redraw();
+    }
+
+    moveLayerDown(layerId) {
+        const note = this.notes[this.currentNoteIndex];
+        if (!note || !note.layers) return;
+        const index = note.layers.findIndex(l => l.id === layerId);
+        if (index <= 0) return; // Already at bottom
+        // Swap with previous element
+        const temp = note.layers[index];
+        note.layers[index] = note.layers[index - 1];
+        note.layers[index - 1] = temp;
+        this.saveState();
+        this.updateLayerPanel();
+        this.redraw();
+    }
+
+    setActiveLayer(layerId) {
+        const note = this.notes[this.currentNoteIndex];
+        if (!note) return;
+        note.activeLayerId = layerId;
+        this.updateLayerPanel();
+    }
+
+    toggleLayerVisibility(layerId) {
+        const note = this.notes[this.currentNoteIndex];
+        if (!note || !note.layers) return;
+        const layer = note.layers.find(l => l.id === layerId);
+        if (!layer) return;
+        layer.visible = !layer.visible;
+
+        // If hiding the active layer, switch to next visible layer
+        if (!layer.visible && note.activeLayerId === layerId) {
+            const visibleLayer = note.layers.find(l => l.visible);
+            if (visibleLayer) {
+                note.activeLayerId = visibleLayer.id;
+            }
+        }
+
+        this.updateDOMVisibility();
+        this.redraw();
+        this.updateLayerPanel();
+        this.saveState();
+    }
+
+    toggleLayerLock(layerId) {
+        const note = this.notes[this.currentNoteIndex];
+        if (!note || !note.layers) return;
+        const layer = note.layers.find(l => l.id === layerId);
+        if (!layer) return;
+        layer.locked = !layer.locked;
+        this.updateLayerPanel();
+        this.autoSave();
+    }
+
+    updateLayerPanel() {
+        const layerList = document.getElementById('layer-list');
+        if (!layerList) return;
+
+        const note = this.notes[this.currentNoteIndex];
+        if (!note || !note.layers) {
+            layerList.innerHTML = '';
+            return;
+        }
+
+        layerList.innerHTML = '';
+
+        // Iterate in reverse order (top layer shown first in panel)
+        for (let i = note.layers.length - 1; i >= 0; i--) {
+            const layer = note.layers[i];
+            const isActive = layer.id === note.activeLayerId;
+
+            const item = document.createElement('div');
+            item.className = 'layer-item';
+            if (isActive) item.classList.add('active');
+            if (!layer.visible) item.classList.add('hidden-layer');
+            if (layer.locked) item.classList.add('locked-layer');
+            item.dataset.layerId = layer.id;
+
+            // Clicking the item sets it as active layer
+            item.addEventListener('click', (e) => {
+                // Don't trigger if clicking buttons
+                if (e.target.closest('.layer-icon-btn') || e.target.closest('.layer-order-btn') || e.target.closest('.layer-delete-btn') || e.target.closest('.layer-name.editing')) return;
+                this.setActiveLayer(layer.id);
+            });
+
+            // Visibility button
+            const visBtn = document.createElement('button');
+            visBtn.className = 'layer-icon-btn';
+            if (layer.visible) visBtn.classList.add('active');
+            visBtn.innerHTML = layer.visible
+                ? '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>'
+                : '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';
+            visBtn.title = layer.visible ? 'Hide layer' : 'Show layer';
+            visBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.toggleLayerVisibility(layer.id);
+            });
+            item.appendChild(visBtn);
+
+            // Name span (double-click to edit)
+            const nameSpan = document.createElement('span');
+            nameSpan.className = 'layer-name';
+            nameSpan.textContent = layer.name;
+            nameSpan.addEventListener('dblclick', (e) => {
+                e.stopPropagation();
+                nameSpan.contentEditable = 'true';
+                nameSpan.classList.add('editing');
+                nameSpan.focus();
+                // Select all text
+                const range = document.createRange();
+                range.selectNodeContents(nameSpan);
+                const sel = window.getSelection();
+                sel.removeAllRanges();
+                sel.addRange(range);
+            });
+            nameSpan.addEventListener('blur', () => {
+                nameSpan.contentEditable = 'false';
+                nameSpan.classList.remove('editing');
+                this.renameLayer(layer.id, nameSpan.textContent);
+            });
+            nameSpan.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    nameSpan.blur();
+                }
+                if (e.key === 'Escape') {
+                    nameSpan.textContent = layer.name;
+                    nameSpan.blur();
+                }
+            });
+            item.appendChild(nameSpan);
+
+            // Lock button
+            const lockBtn = document.createElement('button');
+            lockBtn.className = 'layer-icon-btn';
+            if (layer.locked) lockBtn.classList.add('active');
+            lockBtn.innerHTML = layer.locked
+                ? '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>'
+                : '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 019.9-1"/></svg>';
+            lockBtn.title = layer.locked ? 'Unlock layer' : 'Lock layer';
+            lockBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.toggleLayerLock(layer.id);
+            });
+            item.appendChild(lockBtn);
+
+            // Order buttons
+            const orderBtns = document.createElement('div');
+            orderBtns.className = 'layer-order-btns';
+            const upBtn = document.createElement('button');
+            upBtn.className = 'layer-order-btn';
+            upBtn.innerHTML = '&#9650;'; // Up triangle
+            upBtn.title = 'Move up';
+            upBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.moveLayerUp(layer.id);
+            });
+            const downBtn = document.createElement('button');
+            downBtn.className = 'layer-order-btn';
+            downBtn.innerHTML = '&#9660;'; // Down triangle
+            downBtn.title = 'Move down';
+            downBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.moveLayerDown(layer.id);
+            });
+            orderBtns.appendChild(upBtn);
+            orderBtns.appendChild(downBtn);
+            item.appendChild(orderBtns);
+
+            // Delete button (only if more than 1 layer)
+            if (note.layers.length > 1) {
+                const delBtn = document.createElement('button');
+                delBtn.className = 'layer-delete-btn';
+                delBtn.innerHTML = '&#10005;'; // X symbol
+                delBtn.title = 'Delete layer';
+                delBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    this.deleteLayer(layer.id);
+                });
+                item.appendChild(delBtn);
+            }
+
+            layerList.appendChild(item);
+        }
     }
 
     // Select all items
