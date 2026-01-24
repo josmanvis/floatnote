@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-01-22)
 
 **Core value:** A persistent, transparent scratch space that's always one keyboard shortcut away
-**Current focus:** All phases complete
+**Current focus:** Phase 5 - Layers and Layer Management
 
 ## Current Position
 
-Phase: 3 of 4 (CI/CD Pipeline)
-Plan: 2 of 2 in current phase
-Status: Phase complete -- ALL PHASES COMPLETE
-Last activity: 2026-01-23 -- Completed quick task 006: Docusaurus website for GitHub Pages
+Phase: 5 of 5 (Layers and Layer Management)
+Plan: 1 of 2 in current phase
+Status: In progress
+Last activity: 2026-01-24 -- Completed 05-01-PLAN.md (layer data model)
 
-Progress: [██████████] 100%
+Progress: [█████████░] 90%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 9
-- Average duration: ~2.4 min
-- Total execution time: ~22 min
+- Total plans completed: 10
+- Average duration: ~2.6 min
+- Total execution time: ~27 min
 
 **By Phase:**
 
@@ -31,10 +31,11 @@ Progress: [██████████] 100%
 | 2 | 3 | ~14 min | ~4.7 min |
 | 3 | 2 | ~1.5 min | ~0.75 min |
 | 4 | 2 | ~2.5 min | ~1.25 min |
+| 5 | 1 | ~5 min | ~5 min |
 
 **Recent Trend:**
-- Last 5 plans: 02-03 ✓, 04-01 ✓, 04-02 ✓, 03-01 ✓, 03-02 ✓
-- Trend: Stable -- all phases complete
+- Last 5 plans: 04-01, 04-02, 03-01, 03-02, 05-01 (all complete)
+- Trend: Stable
 
 *Updated after each plan completion*
 
@@ -61,10 +62,14 @@ Recent decisions affecting current work:
 - [02-03]: Restart tests manage own Electron lifecycle (no shared fixture)
 - [02-03]: Use page.evaluate for text creation (canvas overlay blocks text-container clicks)
 - [02-03]: Use dispatchEvent for settings changes to trigger save handlers
+- [05-01]: Layers array stored at note level with activeLayerId reference
+- [05-01]: Migration deletes flat properties after moving to layer object
+- [05-01]: Cross-layer selection auto-switches activeLayerId
+- [05-01]: Shape fill-area hit testing works in all modes (bug fix)
 
 ### Pending Todos
 
-None yet.
+None.
 
 ### Blockers/Concerns
 
@@ -86,6 +91,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-01-23
-Stopped at: Completed quick task 007: menubar icon dark mode support
+Last session: 2026-01-24
+Stopped at: Completed 05-01-PLAN.md (layer data model and cross-layer rendering)
 Resume file: None
