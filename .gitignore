@@ -18,3 +18,7 @@ mac-arm64/
 website/.docusaurus/
 website/build/
 website/node_modules/
+
+# Added by pubsafe
+.planning
+CLAUDE.md
