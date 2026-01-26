@@ -7,8 +7,8 @@ const config: Config = {
   tagline: 'A transparent always-on-top drawing and note-taking overlay for macOS',
   favicon: 'img/favicon.ico',
 
-  url: 'https://josmanvis.github.io',
-  baseUrl: '/floatnote/',
+  url: 'https://floatnote.crativo.xyz',
+  baseUrl: '/',
 
   organizationName: 'josmanvis',
   projectName: 'floatnote',
