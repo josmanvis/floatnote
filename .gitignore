@@ -7,9 +7,18 @@ dist/
 *.log
 .DS_Store
 coverage/
+test-results/
+playwright-report/
 .env
 mac-arm64/
 *.dmg
 *.zip
 *.blockmap
 *.tgz
+website/.docusaurus/
+website/build/
+website/node_modules/
+
+# Added by pubsafe
+.planning
+CLAUDE.md

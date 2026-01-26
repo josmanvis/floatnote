@@ -43,6 +43,14 @@ module.exports = {
       moduleNameMapper: {
         '^electron$': '<rootDir>/tests/mocks/electron.js'
       }
+    },
+    {
+      displayName: 'integration',
+      testEnvironment: 'node',
+      testMatch: ['<rootDir>/tests/integration/**/*.test.js'],
+      moduleNameMapper: {
+        '^electron$': '<rootDir>/tests/mocks/electron.js'
+      }
     }
   ]
 };

@@ -65,11 +65,11 @@ div#window-top-edge-drag-handle {
     height: 4px;
     width: calc(100% - 40px);
     -webkit-app-region: drag;
-    background-color: red;
+    background-color: transparent;
     border-radius: 10px;
 }
 div#window-top-edge-drag-handle:hover {
-    background-color: green;
+    background-color: rgba(0, 0, 0, 0.3);
     height: 10px;
     app-region: drag;
     user-select: none;
@@ -228,6 +228,15 @@ div#window-top-edge-drag-handle:hover {
     background: rgba(255, 255, 255, 0.25);
 }
 
+#freeze-btn.active {
+    background: rgba(56, 189, 248, 0.3);
+    color: #38bdf8;
+}
+
+#freeze-btn.active:hover {
+    background: rgba(56, 189, 248, 0.4);
+}
+
 .tool-btn.danger {
     background: rgba(239, 68, 68, 0.3);
 }
@@ -327,6 +336,45 @@ div#window-top-edge-drag-handle:hover {
     background: white;
     border-radius: 50%;
     flex-shrink: 0;
+}
+
+/* Shape dropdown */
+.shape-dropdown {
+    min-width: 130px;
+}
+
+.shape-option {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 8px 12px;
+    background: transparent;
+    border: none;
+    border-radius: 6px;
+    color: white;
+    font-size: 12px;
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+
+.shape-option:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.shape-option.active {
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.shape-option.active::after {
+    content: "\2713";
+    margin-left: auto;
+    color: #facc15;
+}
+
+.shape-option svg {
+    flex-shrink: 0;
+    stroke: white;
 }
 
 /* Pin toggle */
@@ -1382,10 +1430,221 @@ div#window-top-edge-drag-handle:hover {
 
 #app {
     --bg-opacity: 0.1;
-    background: rgba(255, 255, 255, var(--bg-opacity));
+    background: rgba(0, 0, 0, var(--bg-opacity));
 }
 
 /* Multi-selection highlight */
 .multi-selected-stroke {
     filter: drop-shadow(0 0 4px #3b82f6);
+}
+
+/* Layer Panel */
+.layer-panel {
+    position: absolute;
+    left: 12px;
+    top: 60px;
+    bottom: 60px;
+    width: 180px;
+    max-height: calc(100vh - 120px);
+    background: rgba(30, 30, 30, 0.95);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    z-index: 90;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateX(-10px);
+    transition: opacity 0.2s ease, transform 0.2s ease, visibility 0.2s;
+    display: flex;
+    flex-direction: column;
+    pointer-events: auto;
+}
+
+.layer-panel.visible {
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(0);
+}
+
+.drawing .layer-panel {
+    pointer-events: none;
+}
+
+.layer-panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 12px 8px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.layer-panel-title {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.layer-action-btn {
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.6);
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.15s, background 0.15s;
+}
+
+.layer-action-btn:hover {
+    color: #fff;
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.layer-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 6px;
+}
+
+.layer-list::-webkit-scrollbar {
+    width: 4px;
+}
+
+.layer-list::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 2px;
+}
+
+.layer-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 5px 6px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.15s ease;
+    margin-bottom: 2px;
+    position: relative;
+}
+
+.layer-item:hover {
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.layer-item.active {
+    background: rgba(59, 130, 246, 0.15);
+    border: 1px solid rgba(59, 130, 246, 0.3);
+}
+
+.layer-item.hidden-layer {
+    opacity: 0.4;
+}
+
+.layer-item.locked-layer {
+    opacity: 0.7;
+}
+
+.layer-icon-btn {
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.5);
+    cursor: pointer;
+    padding: 2px;
+    border-radius: 3px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+    transition: color 0.15s;
+}
+
+.layer-icon-btn:hover {
+    color: #fff;
+}
+
+.layer-icon-btn.active {
+    color: rgba(59, 130, 246, 0.8);
+}
+
+.layer-name {
+    flex: 1;
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.85);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+    padding: 1px 4px;
+    border-radius: 3px;
+    border: 1px solid transparent;
+    outline: none;
+}
+
+.layer-name.editing {
+    border-color: rgba(59, 130, 246, 0.5);
+    background: rgba(0, 0, 0, 0.3);
+    color: #fff;
+}
+
+.layer-order-btns {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    flex-shrink: 0;
+}
+
+.layer-order-btn {
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.4);
+    cursor: pointer;
+    padding: 0;
+    width: 14px;
+    height: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 8px;
+    transition: color 0.15s;
+}
+
+.layer-order-btn:hover {
+    color: #fff;
+}
+
+.layer-delete-btn {
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.3);
+    cursor: pointer;
+    padding: 2px;
+    border-radius: 3px;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 18px;
+    height: 18px;
+    font-size: 10px;
+    transition: color 0.15s;
+}
+
+.layer-item:hover .layer-delete-btn {
+    display: flex;
+}
+
+.layer-delete-btn:hover {
+    color: #ef4444;
+}
+
+#layer-toggle.active {
+    color: rgba(59, 130, 246, 0.9);
 }

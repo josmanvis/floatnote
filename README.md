@@ -4,6 +4,8 @@ Transparent always-on-top drawing and note-taking overlay for macOS.
 
 ![Floatnote](https://img.shields.io/npm/v/floatnote) ![License](https://img.shields.io/npm/l/floatnote)
 
+**[Documentation](https://josmanvis.github.io/floatnote/)** | **[Download](https://josmanvis.github.io/floatnote/download/)** | **[FAQ](https://josmanvis.github.io/floatnote/docs/faq/)**
+
 ## Installation
 
 ### Using npx (recommended)

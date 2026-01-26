@@ -20,6 +20,12 @@ class Glassboard {
         this.currentLine = null;
         this.selectedTextId = null;
 
+        // Shape drawing state
+        this.currentShape = null;       // 'rectangle' | 'circle' | 'triangle' | 'line' | 'arrow' | null
+        this.isShapeMode = false;
+        this.shapeStartPoint = null;    // {x, y} where drag started
+        this.shapePreviewLine = null;   // Preview line during drag
+
         // Object grouping state
         this.currentObjectId = null;
         this.lastStrokeTime = 0;
@@ -29,6 +35,18 @@ class Glassboard {
         this.selectedObjectId = null;
         this.isDraggingObject = false;
         this.dragStartPoint = null;
+
+        // Resize state
+        this.activeHandle = null;
+        this.handleSize = 8;
+        this.isResizing = false;
+        this.resizeAnchor = null;
+        this.resizeStartBounds = null;
+
+        // Shape rotation state
+        this.isRotating = false;
+        this.rotateStartAngle = 0;
+        this.rotatePivot = null;
 
         // Zoom state
         this.zoomLevel = 1;
@@ -41,6 +59,9 @@ class Glassboard {
 
         // Rotation state
         this.rotation = 0;
+
+        // Freeze state (locks pan/zoom/rotation)
+        this.frozen = false;
 
         // Settings
         this.settings = {
@@ -86,6 +107,9 @@ class Glassboard {
         // Double command key tracking
         this.lastRightCommandTime = 0;
 
+        // Layer panel state
+        this.layerPanelVisible = false;
+
         this.init();
     }
 
@@ -102,6 +126,7 @@ class Glassboard {
         this.setupClipboardPaste();
         this.setupSettings();
         this.setupGestures();
+        this.setupFreezeToggle();
         this.setupFileDrop();
 
         // Initialize with empty note if needed
@@ -118,36 +143,36 @@ class Glassboard {
         // Setup pagination controls
         this.setupPagination();
 
+        // Setup layer panel
+        this.setupLayerPanel();
+
         // Setup window toggle handler for clean slate
         this.setupWindowToggleHandler();
     }
 
-    // Note management - getters for current note's data
+    // Note management - getters for current note's data (delegated to active layer)
     get lines() {
-        return this.notes[this.currentNoteIndex]?.lines || [];
+        return this.getActiveLayer()?.lines || [];
     }
     set lines(value) {
-        if (this.notes[this.currentNoteIndex]) {
-            this.notes[this.currentNoteIndex].lines = value;
-        }
+        const layer = this.getActiveLayer();
+        if (layer) layer.lines = value;
     }
 
     get textItems() {
-        return this.notes[this.currentNoteIndex]?.textItems || [];
+        return this.getActiveLayer()?.textItems || [];
     }
     set textItems(value) {
-        if (this.notes[this.currentNoteIndex]) {
-            this.notes[this.currentNoteIndex].textItems = value;
-        }
+        const layer = this.getActiveLayer();
+        if (layer) layer.textItems = value;
     }
 
     get images() {
-        return this.notes[this.currentNoteIndex]?.images || [];
+        return this.getActiveLayer()?.images || [];
     }
     set images(value) {
-        if (this.notes[this.currentNoteIndex]) {
-            this.notes[this.currentNoteIndex].images = value;
-        }
+        const layer = this.getActiveLayer();
+        if (layer) layer.images = value;
     }
 
     get attachments() {
@@ -159,15 +184,88 @@ class Glassboard {
         }
     }
 
+    // Layer management methods
+    migrateNoteToLayers(note) {
+        if (note.layers) return note;
+        const layerId = 'layer-' + (note.id || Date.now());
+        const defaultLayer = {
+            id: layerId,
+            name: 'Layer 1',
+            visible: true,
+            locked: false,
+            lines: note.lines || [],
+            textItems: note.textItems || [],
+            images: note.images || []
+        };
+        note.layers = [defaultLayer];
+        note.activeLayerId = layerId;
+        delete note.lines;
+        delete note.textItems;
+        delete note.images;
+        return note;
+    }
+
+    getActiveLayer() {
+        const note = this.notes[this.currentNoteIndex];
+        if (!note || !note.layers) return null;
+        const layer = note.layers.find(l => l.id === note.activeLayerId);
+        return layer || note.layers[0] || null;
+    }
+
+    isActiveLayerLocked() {
+        return this.getActiveLayer()?.locked || false;
+    }
+
+    getAllVisibleLines() {
+        const note = this.notes[this.currentNoteIndex];
+        if (!note || !note.layers) return [];
+        const allLines = [];
+        note.layers.forEach(layer => {
+            if (layer.visible) {
+                allLines.push(...layer.lines);
+            }
+        });
+        return allLines;
+    }
+
+    findLayerForObject(objectId) {
+        const note = this.notes[this.currentNoteIndex];
+        if (!note || !note.layers) return null;
+        for (const layer of note.layers) {
+            if (!layer.visible) continue;
+            if (layer.lines.some(l => l.objectId === objectId)) return layer.id;
+        }
+        return null;
+    }
+
+    updateDOMVisibility() {
+        const note = this.notes[this.currentNoteIndex];
+        if (!note || !note.layers) return;
+        note.layers.forEach(layer => {
+            const display = layer.visible ? '' : 'none';
+            this.textContainer.querySelectorAll(`[data-layer-id="${layer.id}"]`).forEach(el => {
+                el.style.display = display;
+            });
+        });
+    }
+
     createEmptyNote() {
         // Get viewport dimensions for origin calculation
         const rect = this.canvas?.getBoundingClientRect() || { width: 800, height: 600 };
         const zoom = this.zoomLevel || 1;
+        const layerId = 'layer-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
         return {
             id: Date.now().toString(),
-            lines: [],
-            textItems: [],
-            images: [],
+            layers: [{
+                id: layerId,
+                name: 'Layer 1',
+                visible: true,
+                locked: false,
+                lines: [],
+                textItems: [],
+                images: []
+            }],
+            activeLayerId: layerId,
             attachments: [],
             // Store the origin point in content-space (center of viewport when note was created)
             originX: (rect.width / 2) / zoom,
@@ -220,18 +318,25 @@ class Glassboard {
         const note = this.notes[this.currentNoteIndex];
         if (!note) return;
 
-        // Restore text items
-        note.textItems.forEach(item => {
-            this.restoreTextItem(item);
-        });
+        // Blur any active layer name editing
+        const editingName = document.querySelector('.layer-name.editing');
+        if (editingName) editingName.blur();
 
-        // Restore images
-        note.images.forEach(img => {
-            this.restoreImage(img);
-        });
+        // Restore text items and images from all visible layers
+        if (note.layers) {
+            note.layers.forEach(layer => {
+                if (layer.visible) {
+                    layer.textItems.forEach(item => this.restoreTextItem(item, layer.id));
+                    layer.images.forEach(img => this.restoreImage(img, layer.id));
+                }
+            });
+        }
 
         // Redraw canvas with lines
         this.redraw();
+
+        // Update layer panel for new note
+        this.updateLayerPanel();
 
         // Reset history for this note
         this.history = [];
@@ -296,11 +401,24 @@ class Glassboard {
         const setMode = (mode) => {
             this.isSelectMode = mode === 'select';
             this.isTextMode = mode === 'text';
+            this.isShapeMode = false;
+            this.currentShape = null;
+
+            // Deselect any selected objects when switching modes
+            if (this.selectedObjectId) {
+                this.selectedObjectId = null;
+            }
+            this.clearMultiSelection();
 
             // Update button states
             selectModeBtn.classList.toggle('active', mode === 'select');
             drawModeBtn.classList.toggle('active', mode === 'draw');
             textModeBtn.classList.toggle('active', mode === 'text');
+
+            // Deactivate shape mode
+            const shapeToggleBtn = document.getElementById('shape-toggle');
+            if (shapeToggleBtn) shapeToggleBtn.classList.remove('active');
+            document.querySelectorAll('.shape-option').forEach(b => b.classList.remove('active'));
 
             // Update canvas/text container interactions
             if (mode === 'select') {
@@ -326,6 +444,29 @@ class Glassboard {
         selectModeBtn.addEventListener('click', () => setMode('select'));
         drawModeBtn.addEventListener('click', () => setMode('draw'));
         textModeBtn.addEventListener('click', () => setMode('text'));
+
+        // Shape tool dropdown
+        const shapeToggle = document.getElementById('shape-toggle');
+        const shapeOptions = document.querySelectorAll('.shape-option');
+
+        shapeOptions.forEach(btn => {
+            btn.addEventListener('click', () => {
+                shapeOptions.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                this.currentShape = btn.dataset.shape;
+                this.isShapeMode = true;
+                // Activate shape mode (similar to draw mode but with shape behavior)
+                this.isSelectMode = false;
+                this.isTextMode = false;
+                selectModeBtn.classList.remove('active');
+                drawModeBtn.classList.remove('active');
+                textModeBtn.classList.remove('active');
+                shapeToggle.classList.add('active');
+                this.canvas.style.pointerEvents = 'auto';
+                this.canvas.style.cursor = 'crosshair';
+                this.textContainer.style.pointerEvents = 'none';
+            });
+        });
 
         // Color picker dropdown
         const colorBtns = document.querySelectorAll('.color-grid .color-btn');
@@ -362,6 +503,10 @@ class Glassboard {
                     currentStroke.style.width = size + 'px';
                     currentStroke.style.height = size + 'px';
                 }
+                // Update selected object's stroke width
+                if (this.selectedObjectId) {
+                    this.changeObjectWidth(this.selectedObjectId, parseInt(btn.dataset.width));
+                }
             });
         });
 
@@ -397,6 +542,24 @@ class Glassboard {
             window.glassboard.setPinned(pinCheckbox.checked);
             this.animatePinIcon();
         }
+    }
+
+    setupFreezeToggle() {
+        const freezeBtn = document.getElementById('freeze-btn');
+        if (freezeBtn) {
+            freezeBtn.addEventListener('click', () => {
+                this.toggleFreeze();
+            });
+        }
+    }
+
+    toggleFreeze() {
+        this.frozen = !this.frozen;
+        const freezeBtn = document.getElementById('freeze-btn');
+        if (freezeBtn) {
+            freezeBtn.classList.toggle('active', this.frozen);
+        }
+        this.autoSave();
     }
 
     animatePinIcon() {
@@ -438,9 +601,9 @@ class Glassboard {
         `;
         this.app.appendChild(zoomControls);
 
-        document.getElementById('zoom-out').addEventListener('click', () => this.zoomOut());
-        document.getElementById('zoom-in').addEventListener('click', () => this.zoomIn());
-        document.getElementById('zoom-reset').addEventListener('click', () => this.resetTransform());
+        document.getElementById('zoom-out').addEventListener('click', () => { if (!this.frozen) this.zoomOut(); });
+        document.getElementById('zoom-in').addEventListener('click', () => { if (!this.frozen) this.zoomIn(); });
+        document.getElementById('zoom-reset').addEventListener('click', () => { if (!this.frozen) this.resetTransform(); });
     }
 
 
@@ -463,8 +626,47 @@ class Glassboard {
 
         const startDrawing = (e) => {
             if (this.isTextMode) return;
+            if (this.isActiveLayerLocked()) return;
 
             const point = getPoint(e);
+
+            // Shape mode: start shape drawing
+            if (this.isShapeMode && this.currentShape) {
+                this.isDrawing = true;
+                this.app.classList.add('drawing');
+                this.shapeStartPoint = point;
+                // Create a preview line that will be updated during drag
+                const now = Date.now();
+                this.currentObjectId = now.toString();
+                this.shapePreviewLine = {
+                    points: [point],
+                    color: this.currentColor,
+                    width: this.currentStrokeWidth,
+                    objectId: this.currentObjectId,
+                    tool: this.currentShape
+                };
+                this.currentLine = this.shapePreviewLine;
+                return;
+            }
+
+            // Check if clicking on a resize/rotate handle of selected object
+            if (this.selectedObjectId) {
+                const handleId = this.getHandleAtPoint(point);
+                if (handleId === 'rotate') {
+                    this.isRotating = true;
+                    const bounds = this.getObjectBounds(this.selectedObjectId);
+                    this.rotatePivot = { x: bounds.x + bounds.width / 2, y: bounds.y + bounds.height / 2 };
+                    this.rotateStartAngle = Math.atan2(point.y - this.rotatePivot.y, point.x - this.rotatePivot.x);
+                    this.canvas.style.cursor = 'grabbing';
+                    return;
+                }
+                if (handleId) {
+                    this.isResizing = true;
+                    this.activeHandle = handleId;
+                    this.resizeStartBounds = this.getObjectBounds(this.selectedObjectId);
+                    return;
+                }
+            }
 
             // Check if clicking on an existing stroke (for selection)
             const clickedObjectId = this.findObjectAtPoint(point);
@@ -518,6 +720,79 @@ class Glassboard {
 
             const point = getPoint(e);
 
+            // Shape mode: update preview
+            if (this.isShapeMode && this.isDrawing && this.shapeStartPoint) {
+                const shapePoints = this.generateShapePoints(this.currentShape, this.shapeStartPoint, point);
+                this.shapePreviewLine.points = shapePoints;
+                this.currentLine = this.shapePreviewLine;
+                this.redraw();
+                return;
+            }
+
+            // Handle resize
+            if (this.isResizing && this.selectedObjectId && this.resizeStartBounds) {
+                const bounds = this.resizeStartBounds;
+                let newBounds = { x: bounds.x, y: bounds.y, width: bounds.width, height: bounds.height };
+
+                switch (this.activeHandle) {
+                    case 'nw':
+                        newBounds.width += newBounds.x - point.x;
+                        newBounds.height += newBounds.y - point.y;
+                        newBounds.x = point.x;
+                        newBounds.y = point.y;
+                        break;
+                    case 'n':
+                        newBounds.height += newBounds.y - point.y;
+                        newBounds.y = point.y;
+                        break;
+                    case 'ne':
+                        newBounds.width = point.x - newBounds.x;
+                        newBounds.height += newBounds.y - point.y;
+                        newBounds.y = point.y;
+                        break;
+                    case 'e':
+                        newBounds.width = point.x - newBounds.x;
+                        break;
+                    case 'se':
+                        newBounds.width = point.x - newBounds.x;
+                        newBounds.height = point.y - newBounds.y;
+                        break;
+                    case 's':
+                        newBounds.height = point.y - newBounds.y;
+                        break;
+                    case 'sw':
+                        newBounds.width += newBounds.x - point.x;
+                        newBounds.x = point.x;
+                        newBounds.height = point.y - newBounds.y;
+                        break;
+                    case 'w':
+                        newBounds.width += newBounds.x - point.x;
+                        newBounds.x = point.x;
+                        break;
+                }
+
+                // Prevent zero/negative dimensions
+                if (newBounds.width > 5 && newBounds.height > 5) {
+                    this.resizeObject(this.selectedObjectId, bounds, newBounds);
+                    this.resizeStartBounds = this.getObjectBounds(this.selectedObjectId);
+                }
+                return;
+            }
+
+            // Handle rotation
+            if (this.isRotating && this.selectedObjectId && this.rotatePivot) {
+                const currentAngle = Math.atan2(point.y - this.rotatePivot.y, point.x - this.rotatePivot.x);
+                const deltaAngle = currentAngle - this.rotateStartAngle;
+                this.rotateObject(this.selectedObjectId, this.rotatePivot, deltaAngle);
+                this.rotateStartAngle = currentAngle;
+                // Update pivot to new center after rotation
+                const newBounds = this.getObjectBounds(this.selectedObjectId);
+                if (newBounds) {
+                    this.rotatePivot = { x: newBounds.x + newBounds.width / 2, y: newBounds.y + newBounds.height / 2 };
+                }
+                return;
+            }
+
             // Handle drag-box selection
             if (this.isSelecting && this.selectionStart) {
                 const x = Math.min(point.x, this.selectionStart.x);
@@ -540,12 +815,39 @@ class Glassboard {
                 return;
             }
 
+            // Cursor updates when hovering in select mode
+            if (this.isSelectMode && this.selectedObjectId && !this.isDrawing) {
+                const handleId = this.getHandleAtPoint(point);
+                if (handleId) {
+                    this.canvas.style.cursor = this.getHandleCursor(handleId);
+                } else {
+                    // Check if over selected object body
+                    const hoveredId = this.findObjectAtPoint(point);
+                    this.canvas.style.cursor = hoveredId === this.selectedObjectId ? 'move' : 'default';
+                }
+                return;
+            }
+
             if (!this.isDrawing) return;
             this.currentLine.points.push(point);
             this.redraw();
         };
 
         const stopDrawing = (e) => {
+            // Shape mode: finalize shape
+            if (this.isShapeMode && this.isDrawing && this.shapeStartPoint) {
+                this.isDrawing = false;
+                this.app.classList.remove('drawing');
+                if (this.shapePreviewLine && this.shapePreviewLine.points.length > 1) {
+                    this.lines.push(this.shapePreviewLine);
+                    this.saveState();
+                }
+                this.shapePreviewLine = null;
+                this.shapeStartPoint = null;
+                this.currentLine = null;
+                return;
+            }
+
             // Handle drag-box selection completion
             if (this.isSelecting) {
                 this.isSelecting = false;
@@ -562,6 +864,22 @@ class Glassboard {
                     this.selectObjectsInRect(rect);
                 }
                 this.selectionStart = null;
+                return;
+            }
+
+            if (this.isResizing) {
+                this.isResizing = false;
+                this.activeHandle = null;
+                this.resizeStartBounds = null;
+                this.saveState();
+                return;
+            }
+
+            if (this.isRotating) {
+                this.isRotating = false;
+                this.rotatePivot = null;
+                this.canvas.style.cursor = 'default';
+                this.saveState();
                 return;
             }
 
@@ -593,15 +911,94 @@ class Glassboard {
         document.addEventListener('touchend', stopDrawing);
     }
 
-    // Find which object (if any) is at the given point
+    // Determine shape type from a line object
+    getShapeType(line) {
+        if (line.tool) return line.tool;
+        // Heuristic fallback: infer from points array
+        const pts = line.points;
+        if (!pts || pts.length === 0) return 'freehand';
+        if (pts.length >= 60) return 'circle';
+        if (pts.length === 5 && Math.abs(pts[0].x - pts[4].x) < 1 && Math.abs(pts[0].y - pts[4].y) < 1) return 'rectangle';
+        if (pts.length === 4 && Math.abs(pts[0].x - pts[3].x) < 1 && Math.abs(pts[0].y - pts[3].y) < 1) return 'triangle';
+        if (pts.length === 2) return 'line';
+        if (pts.length === 5 && !(Math.abs(pts[0].x - pts[4].x) < 1 && Math.abs(pts[0].y - pts[4].y) < 1)) return 'arrow';
+        return 'freehand';
+    }
+
+    // Check if a point is inside a closed shape's fill area
+    isPointInsideShape(point, line) {
+        const shapeType = this.getShapeType(line);
+
+        if (shapeType === 'circle') {
+            // Ellipse: compute center and radii from bounding box
+            let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+            for (const p of line.points) {
+                minX = Math.min(minX, p.x);
+                minY = Math.min(minY, p.y);
+                maxX = Math.max(maxX, p.x);
+                maxY = Math.max(maxY, p.y);
+            }
+            const cx = (minX + maxX) / 2;
+            const cy = (minY + maxY) / 2;
+            const rx = (maxX - minX) / 2;
+            const ry = (maxY - minY) / 2;
+            if (rx === 0 || ry === 0) return false;
+            const dx = (point.x - cx) / rx;
+            const dy = (point.y - cy) / ry;
+            return (dx * dx + dy * dy) <= 1;
+        }
+
+        if (shapeType === 'rectangle' || shapeType === 'triangle') {
+            // Ray casting point-in-polygon
+            const vertices = line.points.slice(0, -1); // exclude closing duplicate
+            let inside = false;
+            for (let i = 0, j = vertices.length - 1; i < vertices.length; j = i++) {
+                if ((vertices[i].y > point.y) !== (vertices[j].y > point.y) &&
+                    point.x < (vertices[j].x - vertices[i].x) * (point.y - vertices[i].y) / (vertices[j].y - vertices[i].y) + vertices[i].x) {
+                    inside = !inside;
+                }
+            }
+            return inside;
+        }
+
+        // Lines, arrows, freehand: no fill area
+        return false;
+    }
+
+    // Find which object (if any) is at the given point (searches all visible, unlocked layers)
     findObjectAtPoint(point) {
         const hitRadius = 10; // pixels tolerance for clicking
-        for (let i = this.lines.length - 1; i >= 0; i--) {
-            const line = this.lines[i];
-            for (const p of line.points) {
-                const dist = Math.sqrt((p.x - point.x) ** 2 + (p.y - point.y) ** 2);
-                if (dist < hitRadius + line.width / 2) {
+        const note = this.notes[this.currentNoteIndex];
+        if (!note || !note.layers) return null;
+
+        // Search layers in reverse order (top layer = last in array)
+        for (let li = note.layers.length - 1; li >= 0; li--) {
+            const layer = note.layers[li];
+            if (!layer.visible || layer.locked) continue;
+
+            for (let i = layer.lines.length - 1; i >= 0; i--) {
+                const line = layer.lines[i];
+
+                // Check fill-area for closed shapes (works in all modes - bug fix)
+                if (this.isPointInsideShape(point, line)) {
+                    // Auto-switch to this layer if not active
+                    if (note.activeLayerId !== layer.id) {
+                        note.activeLayerId = layer.id;
+                        if (this.updateLayerPanel) this.updateLayerPanel();
+                    }
                     return line.objectId;
+                }
+
+                // Point proximity to stroke
+                for (const p of line.points) {
+                    const dist = Math.sqrt((p.x - point.x) ** 2 + (p.y - point.y) ** 2);
+                    if (dist < hitRadius + line.width / 2) {
+                        if (note.activeLayerId !== layer.id) {
+                            note.activeLayerId = layer.id;
+                            if (this.updateLayerPanel) this.updateLayerPanel();
+                        }
+                        return line.objectId;
+                    }
                 }
             }
         }
@@ -620,9 +1017,9 @@ class Glassboard {
         this.redraw();
     }
 
-    // Move all strokes of an object by dx, dy
+    // Move all strokes of an object by dx, dy (searches all visible layers)
     moveObject(objectId, dx, dy) {
-        this.lines.forEach(line => {
+        this.getAllVisibleLines().forEach(line => {
             if (line.objectId === objectId) {
                 line.points.forEach(p => {
                     p.x += dx;
@@ -633,9 +1030,120 @@ class Glassboard {
         this.redraw();
     }
 
-    // Delete all strokes of an object
+    // Get bounding box of an object (with padding) - searches all visible layers
+    getObjectBounds(objectId, padding = 8) {
+        const objectLines = this.getAllVisibleLines().filter(l => l.objectId === objectId);
+        if (objectLines.length === 0) return null;
+
+        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+        objectLines.forEach(line => {
+            line.points.forEach(p => {
+                minX = Math.min(minX, p.x);
+                minY = Math.min(minY, p.y);
+                maxX = Math.max(maxX, p.x);
+                maxY = Math.max(maxY, p.y);
+            });
+        });
+
+        return {
+            x: minX - padding,
+            y: minY - padding,
+            width: (maxX - minX) + padding * 2,
+            height: (maxY - minY) + padding * 2,
+            rawMinX: minX,
+            rawMinY: minY,
+            rawMaxX: maxX,
+            rawMaxY: maxY
+        };
+    }
+
+    // Get 8 handle positions for a bounding box
+    getHandlePositions(bounds) {
+        const { x, y, width, height } = bounds;
+        const cx = x + width / 2;
+        const cy = y + height / 2;
+        return {
+            'nw': { x: x, y: y },
+            'n':  { x: cx, y: y },
+            'ne': { x: x + width, y: y },
+            'e':  { x: x + width, y: cy },
+            'se': { x: x + width, y: y + height },
+            's':  { x: cx, y: y + height },
+            'sw': { x: x, y: y + height },
+            'w':  { x: x, y: cy },
+            'rotate': { x: cx, y: y - 25 }
+        };
+    }
+
+    // Check if a point hits a resize/rotate handle
+    getHandleAtPoint(point) {
+        if (!this.selectedObjectId) return null;
+        const bounds = this.getObjectBounds(this.selectedObjectId);
+        if (!bounds) return null;
+
+        const handles = this.getHandlePositions(bounds);
+        const hitDist = this.handleSize / 2 + 4; // a little extra tolerance
+
+        for (const [id, pos] of Object.entries(handles)) {
+            const dist = Math.sqrt((point.x - pos.x) ** 2 + (point.y - pos.y) ** 2);
+            if (dist < hitDist) return id;
+        }
+        return null;
+    }
+
+    // Get the cursor style for a given handle
+    getHandleCursor(handleId) {
+        const cursors = {
+            'nw': 'nwse-resize', 'se': 'nwse-resize',
+            'ne': 'nesw-resize', 'sw': 'nesw-resize',
+            'n': 'ns-resize', 's': 'ns-resize',
+            'e': 'ew-resize', 'w': 'ew-resize',
+            'rotate': 'grab'
+        };
+        return cursors[handleId] || 'default';
+    }
+
+    // Resize an object by mapping points from old bounds to new bounds (searches all visible layers)
+    resizeObject(objectId, oldBounds, newBounds) {
+        if (oldBounds.width === 0 || oldBounds.height === 0) return;
+        this.getAllVisibleLines().forEach(line => {
+            if (line.objectId === objectId) {
+                line.points.forEach(p => {
+                    p.x = newBounds.x + ((p.x - oldBounds.x) / oldBounds.width) * newBounds.width;
+                    p.y = newBounds.y + ((p.y - oldBounds.y) / oldBounds.height) * newBounds.height;
+                });
+            }
+        });
+        this.redraw();
+    }
+
+    // Rotate all points of an object around a center by an angle (searches all visible layers)
+    rotateObject(objectId, center, angle) {
+        const cos = Math.cos(angle);
+        const sin = Math.sin(angle);
+        this.getAllVisibleLines().forEach(line => {
+            if (line.objectId === objectId) {
+                line.points.forEach(p => {
+                    const dx = p.x - center.x;
+                    const dy = p.y - center.y;
+                    p.x = dx * cos - dy * sin + center.x;
+                    p.y = dx * sin + dy * cos + center.y;
+                });
+            }
+        });
+        this.redraw();
+    }
+
+    // Delete all strokes of an object (searches all visible layers)
     deleteObject(objectId) {
-        this.lines = this.lines.filter(line => line.objectId !== objectId);
+        const note = this.notes[this.currentNoteIndex];
+        if (note && note.layers) {
+            note.layers.forEach(layer => {
+                if (layer.visible) {
+                    layer.lines = layer.lines.filter(line => line.objectId !== objectId);
+                }
+            });
+        }
         if (this.selectedObjectId === objectId) {
             this.selectedObjectId = null;
         }
@@ -643,12 +1151,12 @@ class Glassboard {
         this.saveState();
     }
 
-    // Select all objects within a rectangle
+    // Select all objects within a rectangle (searches all visible layers)
     selectObjectsInRect(rect) {
         const selectedIds = new Set();
 
         // Find all objects with points inside the rectangle
-        this.lines.forEach(line => {
+        this.getAllVisibleLines().forEach(line => {
             for (const p of line.points) {
                 if (p.x >= rect.x && p.x <= rect.x + rect.width &&
                     p.y >= rect.y && p.y <= rect.y + rect.height) {
@@ -763,14 +1271,26 @@ class Glassboard {
         this.saveState();
     }
 
-    // Change color of all strokes in an object
+    // Change color of all strokes in an object (searches all visible layers)
     changeObjectColor(objectId, color) {
-        this.lines.forEach(line => {
+        this.getAllVisibleLines().forEach(line => {
             if (line.objectId === objectId) {
                 line.color = color;
             }
         });
         this.redraw();
+        this.saveState();
+    }
+
+    // Change stroke width of all strokes in an object (searches all visible layers)
+    changeObjectWidth(objectId, width) {
+        this.getAllVisibleLines().forEach(line => {
+            if (line.objectId === objectId) {
+                line.width = width;
+            }
+        });
+        this.redraw();
+        this.saveState();
     }
 
     // Change color of a text item
@@ -789,9 +1309,9 @@ class Glassboard {
         }
     }
 
-    // Copy selected object to clipboard
+    // Copy selected object to clipboard (searches all visible layers)
     copyObject(objectId) {
-        const objectLines = this.lines.filter(line => line.objectId === objectId);
+        const objectLines = this.getAllVisibleLines().filter(line => line.objectId === objectId);
         if (objectLines.length === 0) return;
 
         // Deep copy the lines
@@ -1020,6 +1540,7 @@ class Glassboard {
     setupTextMode() {
         this.textContainer.addEventListener('click', (e) => {
             if (!this.isTextMode) return;
+            if (this.isActiveLayerLocked()) return;
             if (e.target !== this.textContainer) return;
 
             const rect = this.textContainer.getBoundingClientRect();
@@ -1043,6 +1564,7 @@ class Glassboard {
         const item = document.createElement('div');
         item.className = 'text-item selected';
         item.dataset.id = id;
+        item.dataset.layerId = this.getActiveLayer()?.id || '';
         item.style.left = x + 'px';
         item.style.top = y + 'px';
         item.style.color = this.currentColor;
@@ -1427,21 +1949,21 @@ class Glassboard {
             // Cmd+Plus to zoom in
             if ((e.metaKey || e.ctrlKey) && (e.key === '=' || e.key === '+')) {
                 e.preventDefault();
-                this.zoomIn();
+                if (!this.frozen) this.zoomIn();
                 return;
             }
 
             // Cmd+Minus to zoom out
             if ((e.metaKey || e.ctrlKey) && e.key === '-') {
                 e.preventDefault();
-                this.zoomOut();
+                if (!this.frozen) this.zoomOut();
                 return;
             }
 
             // Cmd+0 to reset view (zoom, pan, rotation)
             if ((e.metaKey || e.ctrlKey) && e.key === '0') {
                 e.preventDefault();
-                this.resetTransform();
+                if (!this.frozen) this.resetTransform();
                 return;
             }
 
@@ -1480,6 +2002,34 @@ class Glassboard {
                 }
                 if (e.key === 't' || e.key === 'T') {
                     this.setMode('text');
+                    return;
+                }
+                if ((e.key === 's' || e.key === 'S') && !e.metaKey && !e.ctrlKey) {
+                    if (this.currentShape) {
+                        // Re-activate shape mode with last used shape
+                        this.isShapeMode = true;
+                        this.isSelectMode = false;
+                        this.isTextMode = false;
+                        const shapeToggle = document.getElementById('shape-toggle');
+                        const selectModeBtn = document.getElementById('select-mode');
+                        const drawModeBtn = document.getElementById('draw-mode');
+                        const textModeBtn = document.getElementById('text-mode');
+                        selectModeBtn.classList.remove('active');
+                        drawModeBtn.classList.remove('active');
+                        textModeBtn.classList.remove('active');
+                        shapeToggle.classList.add('active');
+                        this.canvas.style.pointerEvents = 'auto';
+                        this.canvas.style.cursor = 'crosshair';
+                        this.textContainer.style.pointerEvents = 'none';
+                    }
+                    return;
+                }
+                if (e.key === 'f' || e.key === 'F') {
+                    this.toggleFreeze();
+                    return;
+                }
+                if (e.key === 'l' || e.key === 'L') {
+                    this.toggleLayerPanel();
                     return;
                 }
                 // Size shortcuts: Cmd+1=sm, Cmd+2=md, Cmd+3=lg
@@ -1682,17 +2232,17 @@ class Glassboard {
             `;
 
             menu.querySelector('[data-action="zoom-in"]').addEventListener('click', () => {
-                this.zoomIn();
+                if (!this.frozen) this.zoomIn();
                 this.hideContextMenu();
             });
 
             menu.querySelector('[data-action="zoom-out"]').addEventListener('click', () => {
-                this.zoomOut();
+                if (!this.frozen) this.zoomOut();
                 this.hideContextMenu();
             });
 
             menu.querySelector('[data-action="reset-zoom"]').addEventListener('click', () => {
-                this.resetTransform();
+                if (!this.frozen) this.resetTransform();
                 this.hideContextMenu();
             });
 
@@ -1771,10 +2321,16 @@ class Glassboard {
         // Draw center origin dot (2x2px, zoom-independent)
         this.drawCenterDot();
 
-        // Draw all saved lines
-        this.lines.forEach(line => this.drawLine(line));
+        // Draw all visible layers in order (index 0 = bottom)
+        const note = this.notes[this.currentNoteIndex];
+        if (note && note.layers) {
+            note.layers.forEach(layer => {
+                if (!layer.visible) return;
+                layer.lines.forEach(line => this.drawLine(line));
+            });
+        }
 
-        // Draw current line
+        // Draw current line (always on top during active drawing)
         if (this.currentLine) {
             this.drawLine(this.currentLine);
         }
@@ -1815,6 +2371,90 @@ class Glassboard {
         this.ctx.stroke();
     }
 
+    generateShapePoints(shape, start, end) {
+        const points = [];
+        switch (shape) {
+            case 'rectangle': {
+                points.push(
+                    { x: start.x, y: start.y },
+                    { x: end.x, y: start.y },
+                    { x: end.x, y: end.y },
+                    { x: start.x, y: end.y },
+                    { x: start.x, y: start.y } // close the rectangle
+                );
+                break;
+            }
+            case 'circle': {
+                // Generate points along an ellipse
+                const cx = (start.x + end.x) / 2;
+                const cy = (start.y + end.y) / 2;
+                const rx = Math.abs(end.x - start.x) / 2;
+                const ry = Math.abs(end.y - start.y) / 2;
+                const segments = 64;
+                for (let i = 0; i <= segments; i++) {
+                    const angle = (i / segments) * Math.PI * 2;
+                    points.push({
+                        x: cx + rx * Math.cos(angle),
+                        y: cy + ry * Math.sin(angle)
+                    });
+                }
+                break;
+            }
+            case 'triangle': {
+                // Isoceles triangle: top-center, bottom-right, bottom-left
+                const topX = (start.x + end.x) / 2;
+                const topY = Math.min(start.y, end.y);
+                const bottomY = Math.max(start.y, end.y);
+                const leftX = Math.min(start.x, end.x);
+                const rightX = Math.max(start.x, end.x);
+                points.push(
+                    { x: topX, y: topY },
+                    { x: rightX, y: bottomY },
+                    { x: leftX, y: bottomY },
+                    { x: topX, y: topY } // close the triangle
+                );
+                break;
+            }
+            case 'line': {
+                points.push(
+                    { x: start.x, y: start.y },
+                    { x: end.x, y: end.y }
+                );
+                break;
+            }
+            case 'arrow': {
+                // Line with arrowhead at end
+                const dx = end.x - start.x;
+                const dy = end.y - start.y;
+                const len = Math.sqrt(dx * dx + dy * dy);
+                if (len === 0) {
+                    points.push(start, end);
+                    break;
+                }
+                const headLen = Math.min(20, len * 0.3); // arrowhead length
+                const angle = Math.atan2(dy, dx);
+                const headAngle = Math.PI / 6; // 30 degrees
+
+                // Main line
+                points.push({ x: start.x, y: start.y });
+                points.push({ x: end.x, y: end.y });
+                // Left wing of arrowhead (pen-up simulated by returning to tip)
+                points.push({
+                    x: end.x - headLen * Math.cos(angle - headAngle),
+                    y: end.y - headLen * Math.sin(angle - headAngle)
+                });
+                points.push({ x: end.x, y: end.y }); // back to tip
+                // Right wing of arrowhead
+                points.push({
+                    x: end.x - headLen * Math.cos(angle + headAngle),
+                    y: end.y - headLen * Math.sin(angle + headAngle)
+                });
+                break;
+            }
+        }
+        return points;
+    }
+
     drawCenterDot() {
         // Draw a 2x2px bright yellow dot at the note's stored origin
         // Size is compensated for zoom so it always appears 2x2px visually
@@ -1837,49 +2477,58 @@ class Glassboard {
     }
 
     drawSelectionHighlight() {
-        // Get bounding box of selected object
-        const selectedLines = this.lines.filter(l => l.objectId === this.selectedObjectId);
-        if (selectedLines.length === 0) return;
+        const bounds = this.getObjectBounds(this.selectedObjectId);
+        if (!bounds) return;
 
-        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-        selectedLines.forEach(line => {
-            line.points.forEach(p => {
-                minX = Math.min(minX, p.x);
-                minY = Math.min(minY, p.y);
-                maxX = Math.max(maxX, p.x);
-                maxY = Math.max(maxY, p.y);
-            });
-        });
-
-        // Add padding
-        const padding = 8;
-        minX -= padding;
-        minY -= padding;
-        maxX += padding;
-        maxY += padding;
+        const { x, y, width, height } = bounds;
 
         // Draw selection box
         this.ctx.strokeStyle = '#3b82f6';
         this.ctx.lineWidth = 2;
         this.ctx.setLineDash([5, 5]);
-        this.ctx.strokeRect(minX, minY, maxX - minX, maxY - minY);
+        this.ctx.strokeRect(x, y, width, height);
         this.ctx.setLineDash([]);
 
-        // Draw corner handles
-        const handleSize = 8;
-        this.ctx.fillStyle = '#3b82f6';
-        const corners = [
-            [minX, minY], [maxX, minY],
-            [minX, maxY], [maxX, maxY]
-        ];
-        corners.forEach(([x, y]) => {
-            this.ctx.fillRect(x - handleSize/2, y - handleSize/2, handleSize, handleSize);
+        // Get handle positions
+        const handles = this.getHandlePositions(bounds);
+        const handleSize = this.handleSize;
+
+        // Draw 8 resize handles (white fill, blue border)
+        const resizeHandles = ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'];
+        resizeHandles.forEach(id => {
+            const pos = handles[id];
+            this.ctx.fillStyle = '#ffffff';
+            this.ctx.fillRect(pos.x - handleSize/2, pos.y - handleSize/2, handleSize, handleSize);
+            this.ctx.strokeStyle = '#3b82f6';
+            this.ctx.lineWidth = 2;
+            this.ctx.setLineDash([]);
+            this.ctx.strokeRect(pos.x - handleSize/2, pos.y - handleSize/2, handleSize, handleSize);
         });
+
+        // Draw rotation handle: line from top-center to rotation circle
+        const topCenter = handles['n'];
+        const rotatePos = handles['rotate'];
+        this.ctx.beginPath();
+        this.ctx.strokeStyle = '#3b82f6';
+        this.ctx.lineWidth = 1;
+        this.ctx.setLineDash([]);
+        this.ctx.moveTo(topCenter.x, topCenter.y);
+        this.ctx.lineTo(rotatePos.x, rotatePos.y);
+        this.ctx.stroke();
+
+        // Draw rotation circle
+        this.ctx.beginPath();
+        this.ctx.arc(rotatePos.x, rotatePos.y, 6, 0, Math.PI * 2);
+        this.ctx.fillStyle = '#ffffff';
+        this.ctx.fill();
+        this.ctx.strokeStyle = '#3b82f6';
+        this.ctx.lineWidth = 2;
+        this.ctx.stroke();
     }
 
-    // Draw selection highlight for a specific object (used for multi-select)
+    // Draw selection highlight for a specific object (used for multi-select, searches all visible layers)
     drawSelectionHighlightForObject(objectId) {
-        const selectedLines = this.lines.filter(l => l.objectId === objectId);
+        const selectedLines = this.getAllVisibleLines().filter(l => l.objectId === objectId);
         if (selectedLines.length === 0) return;
 
         let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
@@ -1908,11 +2557,19 @@ class Glassboard {
     }
 
     clear() {
-        this.lines = [];
+        const activeLayer = this.getActiveLayer();
+        if (!activeLayer) return;
+
+        // Clear only the active layer's content
+        activeLayer.lines = [];
+        activeLayer.textItems = [];
+        activeLayer.images = [];
         this.currentLine = null;
-        this.textItems = [];
-        this.images = [];
-        this.textContainer.innerHTML = '';
+
+        // Remove DOM elements belonging to this layer
+        this.textContainer.querySelectorAll(`[data-layer-id="${activeLayer.id}"]`).forEach(el => el.remove());
+
+        this.saveState();
         this.redraw();
     }
 
@@ -2245,6 +2902,7 @@ class Glassboard {
         const imageItem = document.createElement('div');
         imageItem.className = 'pasted-image';
         imageItem.dataset.id = id;
+        imageItem.dataset.layerId = this.getActiveLayer()?.id || '';
         imageItem.style.left = (x / this.zoomLevel) + 'px';
         imageItem.style.top = (y / this.zoomLevel) + 'px';
         imageItem.style.width = displayWidth + 'px';
@@ -2387,6 +3045,7 @@ class Glassboard {
         const item = document.createElement('div');
         item.className = 'text-item';
         item.dataset.id = id;
+        item.dataset.layerId = this.getActiveLayer()?.id || '';
         item.style.left = (x / this.zoomLevel) + 'px';
         item.style.top = (y / this.zoomLevel) + 'px';
         item.style.color = this.currentColor;
@@ -2578,6 +3237,14 @@ class Glassboard {
     }
 
     showSettings() {
+        // Close layer panel if open
+        if (this.layerPanelVisible) {
+            this.layerPanelVisible = false;
+            const panel = document.getElementById('layer-panel');
+            if (panel) panel.classList.remove('visible');
+            const toggleBtn = document.getElementById('layer-toggle');
+            if (toggleBtn) toggleBtn.classList.remove('active');
+        }
         this.settingsPanel.classList.add('visible');
     }
 
@@ -2591,6 +3258,7 @@ class Glassboard {
         this.app.addEventListener('wheel', (e) => {
             // Pinch-to-zoom (trackpad sends ctrlKey with pinch)
             if (e.ctrlKey && this.settings.pinchZoom) {
+                if (this.frozen) return;
                 e.preventDefault();
                 const delta = -e.deltaY * 0.01;
                 const newZoom = Math.max(this.minZoom, Math.min(this.maxZoom, this.zoomLevel + delta));
@@ -2602,7 +3270,7 @@ class Glassboard {
             // Two-finger pan (no modifier key)
             if (this.settings.pan && !e.ctrlKey && !e.metaKey) {
                 // Only pan if not drawing
-                if (this.isDrawing) return;
+                if (this.isDrawing || this.frozen) return;
 
                 e.preventDefault();
                 this.panX -= e.deltaX;
@@ -2620,6 +3288,7 @@ class Glassboard {
 
         this.app.addEventListener('gesturechange', (e) => {
             e.preventDefault();
+            if (this.frozen) return;
 
             // Pinch-to-zoom
             if (this.settings.pinchZoom) {
@@ -2645,7 +3314,7 @@ class Glassboard {
             const now = Date.now();
             if (now - lastTap < 300) {
                 // Double-tap detected - reset transform
-                this.resetTransform();
+                if (!this.frozen) this.resetTransform();
             }
             lastTap = now;
         });
@@ -2655,11 +3324,12 @@ class Glassboard {
     saveState() {
         if (this.isUndoRedoAction) return;
 
-        // Create a snapshot of current state
+        // Create a snapshot of current state (full layers array)
+        const note = this.notes[this.currentNoteIndex];
+        if (!note || !note.layers) return;
         const state = {
-            lines: JSON.parse(JSON.stringify(this.lines)),
-            textItems: this.textItems.map(t => ({ ...t })),
-            images: this.images.map(i => ({ ...i }))
+            layers: JSON.parse(JSON.stringify(note.layers)),
+            activeLayerId: note.activeLayerId
         };
 
         // Remove any states after current index (new branch)
@@ -2700,30 +3370,33 @@ class Glassboard {
     }
 
     restoreState(state) {
-        // Restore lines
-        this.lines = JSON.parse(JSON.stringify(state.lines));
+        const note = this.notes[this.currentNoteIndex];
+        if (!note) return;
 
-        // Clear and restore text items
+        // Restore full layers state
+        note.layers = JSON.parse(JSON.stringify(state.layers));
+        note.activeLayerId = state.activeLayerId;
+
+        // Clear all text items and images from DOM
         this.textContainer.querySelectorAll('.text-item').forEach(el => el.remove());
-        this.textItems = [];
-        state.textItems.forEach(item => {
-            this.restoreTextItem(item);
-        });
-
-        // Clear and restore images
         this.textContainer.querySelectorAll('.pasted-image').forEach(el => el.remove());
-        this.images = [];
-        state.images.forEach(img => {
-            this.restoreImage(img);
+
+        // Restore text items and images from ALL layers
+        note.layers.forEach(layer => {
+            if (layer.visible) {
+                layer.textItems.forEach(item => this.restoreTextItem(item, layer.id));
+                layer.images.forEach(img => this.restoreImage(img, layer.id));
+            }
         });
 
         this.redraw();
     }
 
-    restoreTextItem(item) {
+    restoreTextItem(item, layerId) {
         const element = document.createElement('div');
         element.className = 'text-item';
         element.dataset.id = item.id;
+        element.dataset.layerId = layerId || '';
         element.style.left = item.x + 'px';
         element.style.top = item.y + 'px';
         element.style.color = item.color;
@@ -2768,10 +3441,11 @@ class Glassboard {
         this.setupPastedTextItem(element, item.id, editor, formatBar);
     }
 
-    restoreImage(img) {
+    restoreImage(img, layerId) {
         const imageItem = document.createElement('div');
         imageItem.className = 'pasted-image';
         imageItem.dataset.id = img.id;
+        imageItem.dataset.layerId = layerId || '';
         imageItem.style.left = img.x + 'px';
         imageItem.style.top = img.y + 'px';
         imageItem.style.width = img.width + 'px';
@@ -2804,6 +3478,7 @@ class Glassboard {
 
     // Smart paste - checks system clipboard first, then internal clipboard
     smartPaste() {
+        if (this.isActiveLayerLocked()) return;
         // Check system clipboard first
         this.checkSystemClipboard();
 
@@ -2838,7 +3513,8 @@ class Glassboard {
                 zoomLevel: this.zoomLevel,
                 panX: this.panX,
                 panY: this.panY,
-                rotation: this.rotation
+                rotation: this.rotation,
+                frozen: this.frozen
             }
         };
 
@@ -2867,8 +3543,8 @@ class Glassboard {
             // Fill with transparent background
             exportCtx.clearRect(0, 0, exportCanvas.width, exportCanvas.height);
 
-            // Draw all lines from current note
-            this.lines.forEach(line => {
+            // Draw all lines from all visible layers
+            this.getAllVisibleLines().forEach(line => {
                 if (line.points.length < 2) return;
                 exportCtx.beginPath();
                 exportCtx.strokeStyle = line.color;
@@ -2983,7 +3659,7 @@ class Glassboard {
                 if (this.settings.openWithCleanSlate) {
                     // Keep the notes but create/go to a new blank note
                     if (data.notes && data.notes.length > 0) {
-                        this.notes = data.notes;
+                        this.notes = data.notes.map(n => this.migrateNoteToLayers(n));
                         this.notes.push(this.createEmptyNote());
                         this.currentNoteIndex = this.notes.length - 1;
                     }
@@ -2995,7 +3671,7 @@ class Glassboard {
 
                 // Restore notes (new multi-note format)
                 if (data.notes && data.notes.length > 0) {
-                    this.notes = data.notes;
+                    this.notes = data.notes.map(n => this.migrateNoteToLayers(n));
                     this.currentNoteIndex = data.currentNoteIndex || 0;
 
                     // Make sure index is valid
@@ -3009,14 +3685,15 @@ class Glassboard {
                 // Legacy format support (single note)
                 else if (data.lines || data.textItems || data.images) {
                     // Migrate old format to new format
-                    this.notes = [{
+                    const legacyNote = {
                         id: Date.now().toString(),
                         lines: data.lines || [],
                         textItems: data.textItems || [],
                         images: data.images || [],
                         createdAt: Date.now(),
                         lastModified: Date.now()
-                    }];
+                    };
+                    this.notes = [this.migrateNoteToLayers(legacyNote)];
                     this.currentNoteIndex = 0;
                     this.loadCurrentNote();
                 }
@@ -3027,7 +3704,9 @@ class Glassboard {
                     this.panX = data.transform.panX || 0;
                     this.panY = data.transform.panY || 0;
                     this.rotation = data.transform.rotation || 0;
+                    this.frozen = data.transform.frozen || false;
                     this.applyTransform();
+                    document.getElementById('freeze-btn')?.classList.toggle('active', this.frozen);
                 }
 
                 // Initialize history with loaded state
@@ -3066,22 +3745,313 @@ class Glassboard {
         });
     }
 
+    // Layer panel methods
+    setupLayerPanel() {
+        const toggleBtn = document.getElementById('layer-toggle');
+        const addBtn = document.getElementById('add-layer-btn');
+
+        if (toggleBtn) {
+            toggleBtn.addEventListener('click', () => this.toggleLayerPanel());
+        }
+
+        if (addBtn) {
+            addBtn.addEventListener('click', () => this.createLayer());
+        }
+
+        // Initial render
+        this.updateLayerPanel();
+    }
+
+    toggleLayerPanel() {
+        this.layerPanelVisible = !this.layerPanelVisible;
+        const panel = document.getElementById('layer-panel');
+        if (panel) {
+            panel.classList.toggle('visible', this.layerPanelVisible);
+        }
+        const toggleBtn = document.getElementById('layer-toggle');
+        if (toggleBtn) {
+            toggleBtn.classList.toggle('active', this.layerPanelVisible);
+        }
+        // Close settings panel if open
+        if (this.layerPanelVisible && this.settingsPanel && this.settingsPanel.classList.contains('visible')) {
+            this.hideSettings();
+        }
+    }
+
+    createLayer(name) {
+        const note = this.notes[this.currentNoteIndex];
+        if (!note || !note.layers) return;
+
+        if (note.layers.length >= 10) {
+            console.warn('Layer count exceeds recommended limit of 10. Performance may degrade.');
+        }
+
+        const newLayer = {
+            id: 'layer-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9),
+            name: name || 'Layer ' + (note.layers.length + 1),
+            visible: true,
+            locked: false,
+            lines: [],
+            textItems: [],
+            images: []
+        };
+        note.layers.push(newLayer);
+        note.activeLayerId = newLayer.id;
+        this.saveState();
+        this.updateLayerPanel();
+        this.redraw();
+    }
+
+    deleteLayer(layerId) {
+        const note = this.notes[this.currentNoteIndex];
+        if (!note || !note.layers) return;
+        if (note.layers.length <= 1) return; // Don't delete last layer
+
+        const index = note.layers.findIndex(l => l.id === layerId);
+        if (index === -1) return;
+
+        // Remove DOM elements belonging to this layer
+        this.textContainer.querySelectorAll(`[data-layer-id="${layerId}"]`).forEach(el => el.remove());
+
+        note.layers.splice(index, 1);
+
+        // If deleted layer was active, switch to first remaining layer
+        if (note.activeLayerId === layerId) {
+            note.activeLayerId = note.layers[0].id;
+        }
+
+        this.saveState();
+        this.updateLayerPanel();
+        this.redraw();
+    }
+
+    renameLayer(layerId, newName) {
+        const note = this.notes[this.currentNoteIndex];
+        if (!note || !note.layers) return;
+        const layer = note.layers.find(l => l.id === layerId);
+        if (!layer) return;
+        const trimmed = newName.trim();
+        if (trimmed) {
+            layer.name = trimmed;
+        }
+        this.autoSave();
+    }
+
+    moveLayerUp(layerId) {
+        const note = this.notes[this.currentNoteIndex];
+        if (!note || !note.layers) return;
+        const index = note.layers.findIndex(l => l.id === layerId);
+        if (index === -1 || index >= note.layers.length - 1) return; // Already at top
+        // Swap with next element (higher in array = rendered on top)
+        const temp = note.layers[index];
+        note.layers[index] = note.layers[index + 1];
+        note.layers[index + 1] = temp;
+        this.saveState();
+        this.updateLayerPanel();
+        this.redraw();
+    }
+
+    moveLayerDown(layerId) {
+        const note = this.notes[this.currentNoteIndex];
+        if (!note || !note.layers) return;
+        const index = note.layers.findIndex(l => l.id === layerId);
+        if (index <= 0) return; // Already at bottom
+        // Swap with previous element
+        const temp = note.layers[index];
+        note.layers[index] = note.layers[index - 1];
+        note.layers[index - 1] = temp;
+        this.saveState();
+        this.updateLayerPanel();
+        this.redraw();
+    }
+
+    setActiveLayer(layerId) {
+        const note = this.notes[this.currentNoteIndex];
+        if (!note) return;
+        note.activeLayerId = layerId;
+        this.updateLayerPanel();
+    }
+
+    toggleLayerVisibility(layerId) {
+        const note = this.notes[this.currentNoteIndex];
+        if (!note || !note.layers) return;
+        const layer = note.layers.find(l => l.id === layerId);
+        if (!layer) return;
+        layer.visible = !layer.visible;
+
+        // If hiding the active layer, switch to next visible layer
+        if (!layer.visible && note.activeLayerId === layerId) {
+            const visibleLayer = note.layers.find(l => l.visible);
+            if (visibleLayer) {
+                note.activeLayerId = visibleLayer.id;
+            }
+        }
+
+        this.updateDOMVisibility();
+        this.redraw();
+        this.updateLayerPanel();
+        this.saveState();
+    }
+
+    toggleLayerLock(layerId) {
+        const note = this.notes[this.currentNoteIndex];
+        if (!note || !note.layers) return;
+        const layer = note.layers.find(l => l.id === layerId);
+        if (!layer) return;
+        layer.locked = !layer.locked;
+        this.updateLayerPanel();
+        this.autoSave();
+    }
+
+    updateLayerPanel() {
+        const layerList = document.getElementById('layer-list');
+        if (!layerList) return;
+
+        const note = this.notes[this.currentNoteIndex];
+        if (!note || !note.layers) {
+            layerList.innerHTML = '';
+            return;
+        }
+
+        layerList.innerHTML = '';
+
+        // Iterate in reverse order (top layer shown first in panel)
+        for (let i = note.layers.length - 1; i >= 0; i--) {
+            const layer = note.layers[i];
+            const isActive = layer.id === note.activeLayerId;
+
+            const item = document.createElement('div');
+            item.className = 'layer-item';
+            if (isActive) item.classList.add('active');
+            if (!layer.visible) item.classList.add('hidden-layer');
+            if (layer.locked) item.classList.add('locked-layer');
+            item.dataset.layerId = layer.id;
+
+            // Clicking the item sets it as active layer
+            item.addEventListener('click', (e) => {
+                // Don't trigger if clicking buttons
+                if (e.target.closest('.layer-icon-btn') || e.target.closest('.layer-order-btn') || e.target.closest('.layer-delete-btn') || e.target.closest('.layer-name.editing')) return;
+                this.setActiveLayer(layer.id);
+            });
+
+            // Visibility button
+            const visBtn = document.createElement('button');
+            visBtn.className = 'layer-icon-btn';
+            if (layer.visible) visBtn.classList.add('active');
+            visBtn.innerHTML = layer.visible
+                ? '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>'
+                : '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';
+            visBtn.title = layer.visible ? 'Hide layer' : 'Show layer';
+            visBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.toggleLayerVisibility(layer.id);
+            });
+            item.appendChild(visBtn);
+
+            // Name span (double-click to edit)
+            const nameSpan = document.createElement('span');
+            nameSpan.className = 'layer-name';
+            nameSpan.textContent = layer.name;
+            nameSpan.addEventListener('dblclick', (e) => {
+                e.stopPropagation();
+                nameSpan.contentEditable = 'true';
+                nameSpan.classList.add('editing');
+                nameSpan.focus();
+                // Select all text
+                const range = document.createRange();
+                range.selectNodeContents(nameSpan);
+                const sel = window.getSelection();
+                sel.removeAllRanges();
+                sel.addRange(range);
+            });
+            nameSpan.addEventListener('blur', () => {
+                nameSpan.contentEditable = 'false';
+                nameSpan.classList.remove('editing');
+                this.renameLayer(layer.id, nameSpan.textContent);
+            });
+            nameSpan.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    nameSpan.blur();
+                }
+                if (e.key === 'Escape') {
+                    nameSpan.textContent = layer.name;
+                    nameSpan.blur();
+                }
+            });
+            item.appendChild(nameSpan);
+
+            // Lock button
+            const lockBtn = document.createElement('button');
+            lockBtn.className = 'layer-icon-btn';
+            if (layer.locked) lockBtn.classList.add('active');
+            lockBtn.innerHTML = layer.locked
+                ? '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>'
+                : '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 019.9-1"/></svg>';
+            lockBtn.title = layer.locked ? 'Unlock layer' : 'Lock layer';
+            lockBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.toggleLayerLock(layer.id);
+            });
+            item.appendChild(lockBtn);
+
+            // Order buttons
+            const orderBtns = document.createElement('div');
+            orderBtns.className = 'layer-order-btns';
+            const upBtn = document.createElement('button');
+            upBtn.className = 'layer-order-btn';
+            upBtn.innerHTML = '&#9650;'; // Up triangle
+            upBtn.title = 'Move up';
+            upBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.moveLayerUp(layer.id);
+            });
+            const downBtn = document.createElement('button');
+            downBtn.className = 'layer-order-btn';
+            downBtn.innerHTML = '&#9660;'; // Down triangle
+            downBtn.title = 'Move down';
+            downBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.moveLayerDown(layer.id);
+            });
+            orderBtns.appendChild(upBtn);
+            orderBtns.appendChild(downBtn);
+            item.appendChild(orderBtns);
+
+            // Delete button (only if more than 1 layer)
+            if (note.layers.length > 1) {
+                const delBtn = document.createElement('button');
+                delBtn.className = 'layer-delete-btn';
+                delBtn.innerHTML = '&#10005;'; // X symbol
+                delBtn.title = 'Delete layer';
+                delBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    this.deleteLayer(layer.id);
+                });
+                item.appendChild(delBtn);
+            }
+
+            layerList.appendChild(item);
+        }
+    }
+
     // Select all items
     selectAll() {
-        // Select all drawn objects (by selecting the most recent object group)
-        const objectIds = [...new Set(this.lines.map(l => l.objectId))];
+        // Select all drawn objects on the ACTIVE LAYER only
+        const activeLayer = this.getActiveLayer();
+        if (!activeLayer) return;
+
+        const objectIds = [...new Set(activeLayer.lines.map(l => l.objectId))];
         this.selectedObjects = objectIds;
 
-        // Select all text items
-        this.textItems.forEach(item => {
+        // Select all text items and images on the active layer
+        activeLayer.textItems.forEach(item => {
             const element = this.textContainer.querySelector(`[data-id="${item.id}"]`);
             if (element) {
                 element.classList.add('selected');
             }
         });
-
-        // Select all images
-        this.images.forEach(img => {
+        activeLayer.images.forEach(img => {
             const element = this.textContainer.querySelector(`.pasted-image[data-id="${img.id}"]`);
             if (element) {
                 element.classList.add('selected');
@@ -3093,20 +4063,20 @@ class Glassboard {
         this.redraw();
     }
 
-    // Delete all selected items
+    // Delete all selected items (clears active layer)
     deleteAllSelected() {
         if (!this.allSelected) return;
 
-        // Delete all lines
-        this.lines = [];
+        const activeLayer = this.getActiveLayer();
+        if (!activeLayer) return;
 
-        // Delete all text items
-        this.textContainer.querySelectorAll('.text-item').forEach(el => el.remove());
-        this.textItems = [];
+        // Clear active layer content
+        activeLayer.lines = [];
+        activeLayer.textItems = [];
+        activeLayer.images = [];
 
-        // Delete all images
-        this.textContainer.querySelectorAll('.pasted-image').forEach(el => el.remove());
-        this.images = [];
+        // Remove DOM elements belonging to this layer
+        this.textContainer.querySelectorAll(`[data-layer-id="${activeLayer.id}"]`).forEach(el => el.remove());
 
         this.allSelected = false;
         this.selectedObjectId = null;
@@ -3119,5 +4089,7 @@ class Glassboard {
 
 // Initialize when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
-    new Glassboard();
+    const glassboard = new Glassboard();
+    // Expose instance for E2E testing (harmless in production - nothing reads it)
+    window.glassboardInstance = glassboard;
 });
