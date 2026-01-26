@@ -1,0 +1,65 @@
+<svg width="1280" height="640" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1a1a2e"/>
+      <stop offset="50%" style="stop-color:#16213e"/>
+      <stop offset="100%" style="stop-color:#0f0f23"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#ff6b6b"/>
+      <stop offset="50%" style="stop-color:#ffd93d"/>
+      <stop offset="100%" style="stop-color:#4ecdc4"/>
+    </linearGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="1280" height="640" fill="url(#bg)"/>
+  
+  <!-- Grid pattern -->
+  <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+    <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#ffffff08" stroke-width="1"/>
+  </pattern>
+  <rect width="1280" height="640" fill="url(#grid)"/>
+  
+  <!-- Decorative scribbles (like annotations) -->
+  <g opacity="0.6" filter="url(#glow)">
+    <!-- Circle annotation -->
+    <circle cx="200" cy="150" r="60" fill="none" stroke="#ff6b6b" stroke-width="4" stroke-dasharray="8,4"/>
+    <!-- Arrow -->
+    <path d="M 1000 100 Q 1050 80 1100 120" fill="none" stroke="#4ecdc4" stroke-width="4" stroke-linecap="round"/>
+    <polygon points="1100,120 1085,108 1092,125" fill="#4ecdc4"/>
+    <!-- Squiggle -->
+    <path d="M 100 500 Q 130 480 160 500 T 220 500 T 280 500" fill="none" stroke="#ffd93d" stroke-width="3" stroke-linecap="round"/>
+  </g>
+  
+  <!-- Main text -->
+  <text x="640" y="260" font-family="SF Pro Display, -apple-system, system-ui, sans-serif" font-size="100" font-weight="800" fill="white" text-anchor="middle" filter="url(#glow)">
+    Floatnote
+  </text>
+  
+  <!-- Tagline -->
+  <text x="640" y="340" font-family="SF Pro Display, -apple-system, system-ui, sans-serif" font-size="36" font-weight="500" fill="url(#accent)" text-anchor="middle">
+    Draw on everything. Hide from nothing.
+  </text>
+  
+  <!-- Emoji decorations -->
+  <text x="640" y="420" font-size="40" text-anchor="middle">🎨</text>
+  
+  <!-- Install command -->
+  <rect x="440" y="460" width="400" height="60" rx="10" fill="#ffffff10" stroke="#ffffff30" stroke-width="1"/>
+  <text x="640" y="500" font-family="SF Mono, Monaco, monospace" font-size="24" fill="#4ecdc4" text-anchor="middle">
+    npx floatnote
+  </text>
+  
+  <!-- Bottom badges area -->
+  <text x="640" y="580" font-family="SF Pro Display, -apple-system, system-ui, sans-serif" font-size="20" fill="#888" text-anchor="middle">
+    Transparent screen annotation for macOS • Free & Open Source
+  </text>
+</svg>
