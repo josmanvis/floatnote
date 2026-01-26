@@ -17,7 +17,7 @@ export default function Download(): JSX.Element {
             <h2 className={styles.sectionTitle}>macOS</h2>
             <div className={styles.downloadGrid}>
               <a
-                href="https://github.com/josmanvis/floatnote/releases/latest/download/Floatnote-1.0.7-arm64.dmg"
+                href="https://github.com/josmanvis/floatnote/releases/latest"
                 className={styles.downloadCard}
               >
                 <div className={styles.downloadIcon}>&#63743;</div>
@@ -28,7 +28,7 @@ export default function Download(): JSX.Element {
                 </div>
               </a>
               <a
-                href="https://github.com/josmanvis/floatnote/releases/latest/download/Floatnote-1.0.7.dmg"
+                href="https://github.com/josmanvis/floatnote/releases/latest"
                 className={styles.downloadCard}
               >
                 <div className={styles.downloadIcon}>&#63743;</div>
@@ -45,6 +45,19 @@ export default function Download(): JSX.Element {
                 GitHub Releases
               </a>
             </p>
+          </section>
+
+          <section className={styles.section}>
+            <h2 className={styles.sectionTitle}>Installation Instructions</h2>
+            <p className={styles.instructions}>
+              After downloading and opening the DMG, drag the Floatnote app to your Applications folder.
+            </p>
+            <p className={styles.instructions}>
+              If you see a message that the app is damaged or can't be opened, run the following command in your terminal:
+            </p>
+            <div className={styles.codeBlock}>
+              <code>xattr -cr /Applications/Floatnote.app</code>
+            </div>
           </section>
 
           <section className={styles.section}>

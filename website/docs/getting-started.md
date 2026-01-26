@@ -17,6 +17,14 @@ Get up and running with Floatnote in under a minute.
 3. Open the DMG and drag Floatnote to your Applications folder
 4. Launch Floatnote from Applications
 
+If the app doesn't open, you may need to remove the quarantine attribute:
+
+```bash
+xattr -cr Floatnote.app
+```
+
+Then try launching Floatnote again.
+
 ### Install via npm
 
 ```bash
